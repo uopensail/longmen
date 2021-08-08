@@ -28,17 +28,20 @@ float *ps::binary_search(const char *value, const size_t &n, const size_t &size,
 }
 
 
-ps::Memory::Memory(std::string path, std::shared_ptr<SlotsConfig> &slot_conf) :
-        path_(path),
-        slot_conf_(slot_conf),
+ps::Memory::Memory(std::shared_ptr<::GlobalConfigure> &global_config) :
+        slot_conf_(global_config->get_slot_conf()),
         data_((char **) calloc(1, sizeof(char *) * slot_conf_->get_slots())),
         key_count_((long *) calloc(1, sizeof(long) * slot_conf_->get_slots())) {
+    auto conf = dynamic_pointer_cast<::MemoryPSConfigure>(global_config->get_ps_conf());
+    path_ = conf->get_path();
     std::ifstream reader(path_, std::ios::in | std::ios::binary);
     if (!reader) {
         return;
     }
     int slots_;
     reader.read((char *) &slots_, sizeof(int));
+
+    //slot个数的检查
     assert(slots_ == slot_conf_->get_slots());
     int *dims_ = new int[slots_];
     key_count_ = new long[slots_];
@@ -46,6 +49,8 @@ ps::Memory::Memory(std::string path, std::shared_ptr<SlotsConfig> &slot_conf) :
     reader.read((char *) dims_, sizeof(int) * slots_);
     reader.read((char *) key_count_, sizeof(long) * slots_);
     size_t *offset = new size_t[slots_];
+
+    //每一个slot的dim的检查
     for (int i = 0; i < slots_; i++) {
         assert(dims_[i] == slot_conf_->get_dim(i));
     }
@@ -98,9 +103,10 @@ void ps::Memory::pull(KWWrapper &batch_kw) {
 }
 
 
-ps::RocksDB::RocksDB(std::string path, std::shared_ptr<SlotsConfig> &slot_conf) : path_(path),
-                                                                                  slot_conf_(slot_conf),
-                                                                                  db_(nullptr) {
+ps::RocksDB::RocksDB(std::shared_ptr<::GlobalConfigure> &global_config) : slot_conf_(global_config->get_slot_conf()),
+                                                                          db_(nullptr) {
+    auto conf = dynamic_pointer_cast<::RocksDBPSConfigure>(global_config->get_ps_conf());
+    path_ = conf->get_path();
     rocksdb::Options options;
     options.create_if_missing = true;
     rocksdb::Status status = rocksdb::DB::Open(options, path_, &db_);
@@ -142,7 +148,7 @@ void ps::RocksDB::pull(KWWrapper &batch_kw) {
 }
 
 
-ps::RemoteGRPC::RemoteGRPC(std::string host, int timeout, std::shared_ptr<SlotsConfig> &slot_conf) {
+ps::RemoteGRPC::RemoteGRPC(std::shared_ptr<::GlobalConfigure> &global_config) {
 
 }
 
@@ -171,5 +177,24 @@ void ps::RemoteGRPC::RemoteGRPC::pull(KWWrapper &batch_kw) {
             dst[i] = src.data(i);
         }
     }
+}
 
+std::shared_ptr<ps::Client> ps::create_client(std::shared_ptr<::GlobalConfigure> &global_config) {
+    auto ps_type = global_config->get_ps_conf()->type();
+    if (ps_type == ::PSType::Memory) {
+        std::shared_ptr<Client> client(new Memory(global_config));
+        return client;
+    } else if (ps_type == ::PSType::RocksDB) {
+        std::shared_ptr<Client> client(new RocksDB(global_config));
+        return client;
+    } else if (ps_type == ::PSType::RemoteGRPC) {
+        std::shared_ptr<Client> client(new RemoteGRPC(global_config));
+        return client;
+    } else if (ps_type == ::PSType::RemoteGRPCShard) {
+        std::shared_ptr<Client> client(new RemoteGRPCShard(global_config));
+        return client;
+    } else {
+        LOG(ERROR) << "ps type: " << ps_type << " error";
+        exit(-1);
+    }
 }

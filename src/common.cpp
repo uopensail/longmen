@@ -21,7 +21,7 @@ void KWWrapper::__add__(int index, Keys &keys) {
     }
 }
 
-KWWrapper::KWWrapper(std::shared_ptr<SlotsConfig> &slot_conf, size_t batch_size) : slot_conf_(slot_conf),
+KWWrapper::KWWrapper(std::shared_ptr<SlotsConfigure> &slot_conf, size_t batch_size) : slot_conf_(slot_conf),
                                                                                    batch_size_(batch_size),
                                                                                    dims_(0) {
     keys_.resize(batch_size_);

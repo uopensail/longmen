@@ -33,10 +33,10 @@ namespace ps {
 
     class Memory : public Client {
     private:
-        std::string path_;
-        std::shared_ptr<SlotsConfig> slot_conf_;
+        std::shared_ptr<SlotsConfigure> slot_conf_;
         char **data_;
         long *key_count_;
+        std::string path_;
     public:
         Memory() = delete;
 
@@ -44,7 +44,7 @@ namespace ps {
 
         Memory(const Memory &&) = delete;
 
-        Memory(std::string path, std::shared_ptr<SlotsConfig> &slot_conf);
+        Memory(std::shared_ptr<::GlobalConfigure> &global_config);
 
         ~Memory();
 
@@ -53,9 +53,9 @@ namespace ps {
 
     class RocksDB : public Client {
     private:
-        std::string path_;
-        std::shared_ptr<SlotsConfig> slot_conf_;
+        std::shared_ptr<SlotsConfigure> slot_conf_;
         rocksdb::DB *db_;
+        std::string path_;
     public:
         RocksDB() = delete;
 
@@ -63,7 +63,7 @@ namespace ps {
 
         RocksDB(const RocksDB &&) = delete;
 
-        RocksDB(std::string path, std::shared_ptr<SlotsConfig> &slot_conf);
+        RocksDB(std::shared_ptr<::GlobalConfigure> &global_config);
 
         ~RocksDB();
 
@@ -82,11 +82,33 @@ namespace ps {
 
         RemoteGRPC(const RemoteGRPC &&) = delete;
 
-        RemoteGRPC(std::string host, int timeout, std::shared_ptr<SlotsConfig> &slot_conf);
+        RemoteGRPC(std::shared_ptr<::GlobalConfigure> &global_config);
 
         ~RemoteGRPC();
 
         virtual void pull(KWWrapper &batch_kw);
     };
+
+    class RemoteGRPCShard : public Client {
+    private:
+        std::string host_;
+        std::shared_ptr<Service::Stub> stub_;
+        int timeout_;
+    public:
+        RemoteGRPCShard() = delete;
+
+        RemoteGRPCShard(const RemoteGRPCShard &) = delete;
+
+        RemoteGRPCShard(const RemoteGRPCShard &&) = delete;
+
+        RemoteGRPCShard(std::shared_ptr<::GlobalConfigure> &global_config);
+
+        ~RemoteGRPCShard();
+
+        virtual void pull(KWWrapper &batch_kw);
+    };
+
+    std::shared_ptr<Client> create_client(std::shared_ptr<::GlobalConfigure> &global_config);
+
 }  // namespace ps
 #endif //LONGMEN_PS_H

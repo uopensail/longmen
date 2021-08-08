@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include <mutils.h>
+#include <glog/logging.h>
 #include "config.h"
 #include "cpptoml.h"
 #include "mutils.h"
@@ -25,7 +26,7 @@ static bool __score_cmp__(const Score &a, const Score &b);
 
 class KWWrapper {
 private:
-    std::shared_ptr<SlotsConfig> slot_conf_;
+    std::shared_ptr<SlotsConfigure> slot_conf_;
     size_t batch_size_;
     int32_t dims_;
     Keys all_keys_;
@@ -43,7 +44,7 @@ public:
 
     KWWrapper(const KWWrapper &&) = delete;
 
-    KWWrapper(std::shared_ptr<SlotsConfig> &slot_conf, size_t batch_size);
+    KWWrapper(std::shared_ptr<SlotsConfigure> &slot_conf, size_t batch_size);
 
     ~KWWrapper();
 

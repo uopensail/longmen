@@ -83,7 +83,7 @@ loader::Store::~Store() {
 }
 
 
-loader::Extractor::Extractor(std::shared_ptr<SlotsConfig> &slot_conf, std::string data_file,
+loader::Extractor::Extractor(std::shared_ptr<SlotsConfigure> &slot_conf, std::string data_file,
                              std::string luban_config_file) :
         slot_conf_(slot_conf),
         toolkit_(new luban::ToolKit(luban_config_file)),
@@ -109,4 +109,10 @@ loader::Extractor::~Extractor() {}
     return batch_keys;
 }
 
+std::shared_ptr<loader::Extractor> loader::create_extractor(std::shared_ptr<::GlobalConfigure> &config) {
+    std::shared_ptr<loader::Extractor> extractor(new loader::Extractor(config->get_slot_conf(),
+                                                                       config->get_loader_conf()->get_data_file(),
+                                                                       config->get_loader_conf()->get_config_file()));
+    return extractor;
+}
 

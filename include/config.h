@@ -1,6 +1,8 @@
 #ifndef LONGMEN_CONFIG_H
 #define LONGMEN_CONFIG_H
 
+#include <glog/logging.h>
+#include <gflags/gflags.h>
 #include "cpptoml.h"
 
 //定义参数服务器的类型
@@ -23,26 +25,7 @@ public:
 
     PSConfigure(const PSConfigure &&) = delete;
 
-    PSConfigure(const std::shared_ptr<cpptoml::table> &table) : table_(table), type_(Empty) {
-        assert(table_->contains("ps_type"));
-        int ps_type = *(table_->get_as<int>("ps_type"));
-        switch (ps_type) {
-            case 1:
-                type_ = Memory;
-                break;
-            case 2:
-                type_ = RocksDB;
-                break;
-            case 3:
-                type_ = RemoteGRPC;
-                break;
-            case 4:
-                type_ = RemoteGRPCShard;
-                break;
-            default:
-                exit(-1);
-        }
-    }
+    PSConfigure(const std::shared_ptr<cpptoml::table> &table);
 
     ~PSConfigure() {}
 
@@ -101,7 +84,8 @@ public:
     RemoteGRPCPSConfigure(const RemoteGRPCPSConfigure &&) = delete;
 
     RemoteGRPCPSConfigure(const std::shared_ptr<cpptoml::table> &table) : PSConfigure(table),
-                                                                          host_(*table_->get_as<std::string>("host")) {
+                                                                          host_(*table_->get_as<std::string>("host")),
+                                                                          timeout_(*table_->get_as<int>("timeout")) {
 
     }
 
@@ -112,9 +96,51 @@ public:
     ~RemoteGRPCPSConfigure() {}
 };
 
+class RemoteGRPCShardPSConfigure final : public PSConfigure {
+private:
+    int shards_;
+    int timeout_;
+    std::vector<std::string> hosts_;
+
+
+public:
+    RemoteGRPCShardPSConfigure() = delete;
+
+    RemoteGRPCShardPSConfigure(const RemoteGRPCShardPSConfigure &) = delete;
+
+    RemoteGRPCShardPSConfigure(const RemoteGRPCShardPSConfigure &&) = delete;
+
+    RemoteGRPCShardPSConfigure(const std::shared_ptr<cpptoml::table> &table);
+
+    std::string &get_host(int &index) { return hosts_[index]; }
+
+    int &get_timeout() { return timeout_; }
+
+    ~RemoteGRPCShardPSConfigure() {}
+};
+
+class LoaderConfigure {
+private:
+    std::string data_file_;
+    std::string luban_config_file_;
+public:
+    LoaderConfigure() = delete;
+
+    LoaderConfigure(const LoaderConfigure &) = delete;
+
+    LoaderConfigure(const LoaderConfigure &&) = delete;
+
+    LoaderConfigure(const std::shared_ptr<cpptoml::table> &table);
+
+    ~LoaderConfigure() {}
+
+    std::string &get_data_file() { return data_file_; }
+
+    std::string &get_config_file() { return luban_config_file_; }
+};
 
 //定义slots的信息
-class SlotsConfig {
+class SlotsConfigure {
 private:
     int slots_;
     int *dims_;
@@ -122,31 +148,15 @@ private:
     int *value_space_;
     int *offset_;
 public:
-    SlotsConfig() = delete;
+    SlotsConfigure() = delete;
 
-    ~SlotsConfig() {
-        delete[]dims_;
-        delete[]space_;
-        delete[]value_space_;
-        delete[]offset_;
-    }
+    SlotsConfigure(const SlotsConfigure &) = delete;
 
-    SlotsConfig(const std::shared_ptr<cpptoml::table> &table) {
-        assert(table->contains("slots"));
-        auto conf = table->get_array_of<int>("slots");
-        slots_ = (*conf).size();
-        dims_ = new int[slots_];
-        value_space_ = new int[slots_];
-        space_ = new int[slots_];
-        offset_ = new int[slots_];
+    SlotsConfigure(const SlotsConfigure &&) = delete;
 
-        for (int i = 0; i < slots_; i++) {
-            dims_[i] = conf->at(i);
-            value_space_[i] = sizeof(float) * dims_[i];
-            space_[i] = sizeof(u_int64_t) + value_space_[i];
-            offset_[i] = (i == 0 ? 0 : offset_[i - 1] + dims_[i - 1]);
-        }
-    }
+    ~SlotsConfigure();
+
+    SlotsConfigure(const std::shared_ptr<cpptoml::table> &table);
 
     inline int &get_dim(int slot) {
         return dims_[slot];
@@ -164,8 +174,34 @@ public:
 
 };
 
-class GlobalConfig {
+class GlobalConfigure {
+private:
+    std::shared_ptr<PSConfigure> ps_conf_;
+    std::shared_ptr<SlotsConfigure> slot_conf_;
+    std::shared_ptr<LoaderConfigure> loader_conf_;
+public:
+    GlobalConfigure() = delete;
 
+    GlobalConfigure(const GlobalConfigure &) = delete;
+
+    GlobalConfigure(const GlobalConfigure &&) = delete;
+
+
+    GlobalConfigure(std::string config_file);
+
+    ~GlobalConfigure() {}
+
+    std::shared_ptr<PSConfigure> &get_ps_conf() {
+        return ps_conf_;
+    }
+
+    std::shared_ptr<SlotsConfigure> &get_slot_conf() {
+        return slot_conf_;
+    }
+
+    std::shared_ptr<LoaderConfigure> &get_loader_conf() {
+        return loader_conf_;
+    }
 };
 
 #endif //LONGMEN_CONFIG_H

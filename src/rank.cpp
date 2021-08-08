@@ -1,10 +1,24 @@
 
 #include "rank.h"
 
-model::LR::LR(std::shared_ptr<::GlobalConfig> &config) {
+model::Rank::Rank(std::shared_ptr<::GlobalConfigure> &config) : ps_client_(ps::create_client(config)),
+                                                                extractor_(loader::create_extractor(config)) {}
 
+model::LR::LR(std::shared_ptr<::GlobalConfigure> &config) : Rank(config) {
+    assert(config->get_slot_conf()->get_slots() > 0);
+    for (int i = 0; config->get_slot_conf()->get_slots(); i++) {
+        assert(config->get_slot_conf()->get_dim(i) == 1);
+    }
 }
 
+
+model::FM::FM(std::shared_ptr<::GlobalConfigure> &config) : Rank(config) {
+    assert(config->get_slot_conf()->get_slots() > 0);
+    dim_ = config->get_slot_conf()->get_dim(0);
+    for (int i = 0; config->get_slot_conf()->get_slots(); i++) {
+        assert(config->get_slot_conf()->get_dim(i) == dim_);
+    }
+}
 
 void model::LR::call(tensorflow::Features &user_features, Recalls &recalls, Scores &scores) {
     auto batch_kw = extractor_->call(user_features, recalls);

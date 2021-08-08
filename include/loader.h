@@ -59,18 +59,20 @@ namespace loader {
 
     class Extractor {
     private:
-        std::shared_ptr<SlotsConfig> slot_conf_;
+        std::shared_ptr<SlotsConfigure> slot_conf_;
         std::shared_ptr<luban::ToolKit> toolkit_;
         std::shared_ptr<Store> store_;
     public:
         Extractor() = delete;
 
-        Extractor(std::shared_ptr<SlotsConfig> &slot_conf, std::string data_file, std::string luban_config_file);
+        Extractor(std::shared_ptr<SlotsConfigure> &slot_conf, std::string data_file, std::string luban_config_file);
 
         ~Extractor();
 
         ::KWWrapper *call(tensorflow::Features &user_features, ::Recalls &recalls);
     };
+
+    std::shared_ptr<Extractor> create_extractor(std::shared_ptr<::GlobalConfigure> &config);
 }//namespace loader
 
 #endif //LONGMEN_LOADER_H
