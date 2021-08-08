@@ -1,0 +1,3 @@
+[submodule "third/luban"]
+	path = third/luban
+	url = git@github.com:uopensail/luban.git
