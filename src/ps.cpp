@@ -1,5 +1,5 @@
 #include "ps.h"
-
+#include "stata.h"
 
 int ps::__sort__(const void *a, const void *b) {
     if (((u_int64_t *) a)[0] > ((u_int64_t *) b)[0]) {
@@ -12,11 +12,13 @@ int ps::__sort__(const void *a, const void *b) {
 }
 
 float *ps::binary_search(const char *value, const size_t &n, const size_t &size, u_int64_t &key) {
+    stata::Unit stata_unit("ps.binary_search");
     size_t low = 0, high = n, middle;
     while (low < high) {
         middle = (low + high) >> 1;
 
         if (key == ((u_int64_t *) (value + middle * size))[0]) {
+            stata_unit.End();
             return (float *) (value + middle * size + sizeof(u_int64_t));
         } else if (key > ((u_int64_t *) (value + middle * size))[0]) {
             low = middle + 1;
@@ -24,6 +26,7 @@ float *ps::binary_search(const char *value, const size_t &n, const size_t &size,
             high = middle - 1;
         }
     }
+    stata_unit.MarkErr().End();
     return nullptr;
 }
 
@@ -83,6 +86,7 @@ ps::Memory::~Memory() {
 
 
 void ps::Memory::pull(KWWrapper &batch_kw) {
+    stata::Unit stata_unit("Memory.pull");
     auto weights = batch_kw.weights();
     auto all_keys = batch_kw.get_all_keys();
     int slot;
@@ -100,6 +104,7 @@ void ps::Memory::pull(KWWrapper &batch_kw) {
             offset++;
         }
     }
+    stata_unit.End();
 }
 
 
@@ -108,7 +113,7 @@ ps::RocksDB::RocksDB(std::shared_ptr<::GlobalConfigure> &global_config) : slot_c
     auto conf = dynamic_pointer_cast<::RocksDBPSConfigure>(global_config->get_ps_conf());
     path_ = conf->get_path();
     rocksdb::Options options;
-    options.create_if_missing = true;
+    options.create_if_missing = false;
     rocksdb::Status status = rocksdb::DB::Open(options, path_, &db_);
     if (!status.ok()) {
         std::cerr << "open leveldb error: " << status.ToString() << std::endl;
@@ -121,6 +126,7 @@ ps::RocksDB::RocksDB(std::shared_ptr<::GlobalConfigure> &global_config) : slot_c
 ps::RocksDB::~RocksDB() { delete db_; }
 
 void ps::RocksDB::pull(KWWrapper &batch_kw) {
+    stata::Unit stata_unit("RocksDB.pull");
     auto weights = batch_kw.weights();
     auto all_keys = batch_kw.get_all_keys();
     std::vector<rocksdb::Slice> s_keys;
@@ -145,6 +151,7 @@ void ps::RocksDB::pull(KWWrapper &batch_kw) {
             offset++;
         }
     }
+    stata_unit.End();
 }
 
 
@@ -155,6 +162,7 @@ ps::RemoteGRPC::RemoteGRPC(std::shared_ptr<::GlobalConfigure> &global_config) {
 ps::RemoteGRPC::RemoteGRPC::~RemoteGRPC() {}
 
 void ps::RemoteGRPC::RemoteGRPC::pull(KWWrapper &batch_kw) {
+    stata::Unit stata_unit("RemoteGRPC.pull");
     SingleRequest request;
     SingleResponse response;
     request.set_pack(false);
@@ -177,6 +185,7 @@ void ps::RemoteGRPC::RemoteGRPC::pull(KWWrapper &batch_kw) {
             dst[i] = src.data(i);
         }
     }
+    stata_unit.End();
 }
 
 std::shared_ptr<ps::Client> ps::create_client(std::shared_ptr<::GlobalConfigure> &global_config) {

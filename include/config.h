@@ -14,6 +14,14 @@ enum PSType {
     RemoteGRPCShard = 4                     //客户端分片的GRPC
 };
 
+//定义模型的类型
+enum ModelType {
+    ERRModel = 0,
+    LRModel = 1,                            //lr模型
+    FMModel = 2,                            //fm模型
+    STFModel = 3,                           //带有系数embedding的TensorFlow模型
+};
+
 class PSConfigure {
 protected:
     std::shared_ptr<cpptoml::table> table_;
@@ -174,11 +182,74 @@ public:
 
 };
 
+class ModelConfigure {
+protected:
+    std::shared_ptr<cpptoml::table> table_;
+    ModelType type_;
+public:
+    ModelConfigure() = delete;
+
+    ModelConfigure(const ModelConfigure &) = delete;
+
+    ModelConfigure(const ModelConfigure &&) = delete;
+
+    ModelConfigure(const std::shared_ptr<cpptoml::table> &table);
+
+    ~ModelConfigure() {}
+
+    ModelType &type() { return type_; }
+};
+
+class FMModelConfigure : public ModelConfigure {
+private:
+    int dim_;
+public:
+    FMModelConfigure() = delete;
+
+    FMModelConfigure(const FMModelConfigure &) = delete;
+
+    FMModelConfigure(const FMModelConfigure &&) = delete;
+
+    FMModelConfigure(const std::shared_ptr<cpptoml::table> &table);
+
+    ~FMModelConfigure() {}
+
+    int &get_dim() { return dim_; }
+};
+
+
+class STFModelConfigure : public ModelConfigure {
+private:
+    int dim_;
+    std::string input_op_name_;
+    std::string output_op_name_;
+    std::string model_dir_;
+public:
+    STFModelConfigure() = delete;
+
+    STFModelConfigure(const STFModelConfigure &) = delete;
+
+    STFModelConfigure(const STFModelConfigure &&) = delete;
+
+    STFModelConfigure(const std::shared_ptr<cpptoml::table> &table);
+
+    ~STFModelConfigure() {}
+
+    int &get_dim() { return dim_; }
+
+    std::string &get_input_op() { return input_op_name_; }
+
+    std::string &get_output_op() { return output_op_name_; }
+
+    std::string &get_model_dir() { return model_dir_; }
+};
+
 class GlobalConfigure {
 private:
     std::shared_ptr<PSConfigure> ps_conf_;
     std::shared_ptr<SlotsConfigure> slot_conf_;
     std::shared_ptr<LoaderConfigure> loader_conf_;
+    std::shared_ptr<ModelConfigure> model_conf_;
 public:
     GlobalConfigure() = delete;
 
@@ -201,6 +272,10 @@ public:
 
     std::shared_ptr<LoaderConfigure> &get_loader_conf() {
         return loader_conf_;
+    }
+
+    std::shared_ptr<ModelConfigure> &get_model_conf() {
+        return model_conf_;
     }
 };
 

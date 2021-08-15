@@ -4,6 +4,10 @@
 #include <memory>
 #include "ps.h"
 #include "loader.h"
+#include <tensorflow/cc/saved_model/loader.h>
+#include <tensorflow/core/framework/graph.pb.h>
+#include <tensorflow/core/protobuf/meta_graph.pb.h>
+
 
 namespace model {
     class Rank {
@@ -54,6 +58,12 @@ namespace model {
         ~FM() {}
 
         virtual void call(tensorflow::Features &user_features, Recalls &recalls, Scores &scores);
+    };
+
+    class STF : public Rank {
+    private:
+        std::shared_ptr<::GlobalConfigure> global_conf_;
+
     };
 }
 

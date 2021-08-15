@@ -1,5 +1,5 @@
 #include "loader.h"
-
+#include "stata.h"
 
 loader::Record::Record(std::shared_ptr<luban::ToolKit> &toolkit, char *buffer, int len) {
     features_.ParseFromArray(buffer, len);
@@ -28,6 +28,7 @@ loader::Record::~Record() {}
 
 
 loader::Store::Store(std::string data_file, std::shared_ptr<luban::ToolKit> &toolkit) : toolkit_(toolkit), size_(0) {
+    stata::Unit stata_unit("loader::Store::Store");
     //这里是按照TensorFlow里面tfrecord的结构来读取的，读取的时候不做checksum检查
     u_int64_t max_size = 4096;
     char *buffer = (char *) calloc(1, max_size);
@@ -35,6 +36,7 @@ loader::Store::Store(std::string data_file, std::shared_ptr<luban::ToolKit> &too
     char *tmp = (char *) calloc(1, checksum_len);
     std::ifstream reader(data_file, std::ios::in | std::ios::binary);
     if (!reader) {
+        stata_unit.MarkErr().End();
         exit(-1);
     }
     u_int64_t len;
@@ -65,6 +67,7 @@ loader::Store::Store(std::string data_file, std::shared_ptr<luban::ToolKit> &too
     }
     delete[]buffer;
     reader.close();
+    stata_unit.SetCount(size_).End();
 }
 
 loader::Record *loader::Store::get(std::string &id) const {
@@ -93,6 +96,7 @@ loader::Extractor::Extractor(std::shared_ptr<SlotsConfigure> &slot_conf, std::st
 loader::Extractor::~Extractor() {}
 
 ::KWWrapper *loader::Extractor::call(tensorflow::Features &user_features, ::Recalls &recalls) {
+    stata::Unit stata_unit("Extractor.call");
     Keys user_filed_keys;
     toolkit_->process(user_features, user_filed_keys);
     ::KWWrapper *batch_keys = new ::KWWrapper(slot_conf_, recalls.size());
@@ -105,7 +109,7 @@ loader::Extractor::~Extractor() {}
         toolkit_->bicross_process(user_features, item->get_features(), bi_cross_keys);
         batch_keys->add(row, user_filed_keys, item->get_keys(), bi_cross_keys);
     }
-
+    stata_unit.SetCount(recalls.size()).End();
     return batch_keys;
 }
 
