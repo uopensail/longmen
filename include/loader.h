@@ -25,13 +25,13 @@ namespace loader {
 
         Record(const Record &&) = delete;
 
-        Record(std::shared_ptr<luban::ToolKit> &toolkit, char *buffer, int len);
+        Record(std::shared_ptr<luban::ToolKit> &toolkit, const tensorflow::Features &features);
 
-        inline std::string &get_id();
+        std::string &get_id();
 
-        inline tensorflow::Features &get_features();
+        tensorflow::Features &get_features();
 
-        inline Keys &get_keys();
+        Keys &get_keys();
 
         ~Record();
     };
@@ -40,7 +40,7 @@ namespace loader {
     private:
         std::shared_ptr<luban::ToolKit> toolkit_;
         int size_;
-        std::unordered_map<std::string, Record *> pool_;
+        std::unordered_map<std::string, std::shared_ptr<Record>> pool_;
 
 
     public:
@@ -52,7 +52,7 @@ namespace loader {
 
         Store(std::string data_file, std::shared_ptr<luban::ToolKit> &toolkit);
 
-        Record *get(std::string &id) const;
+        std::shared_ptr<loader::Record> get(std::string &id) const;
 
         ~Store();
     };
@@ -65,6 +65,10 @@ namespace loader {
     public:
         Extractor() = delete;
 
+        Extractor(const Extractor &) = delete;
+
+        Extractor(const Extractor &&) = delete;
+
         Extractor(std::shared_ptr<SlotsConfigure> &slot_conf, std::string data_file, std::string luban_config_file);
 
         ~Extractor();
@@ -72,7 +76,6 @@ namespace loader {
         ::KWWrapper *call(tensorflow::Features &user_features, ::Recalls &recalls);
     };
 
-    std::shared_ptr<Extractor> create_extractor(std::shared_ptr<::GlobalConfigure> &config);
 }//namespace loader
 
 #endif //LONGMEN_LOADER_H

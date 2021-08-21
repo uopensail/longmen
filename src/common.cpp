@@ -1,12 +1,5 @@
 #include "common.h"
 
-
-
-static bool __score_cmp__(const Score &a, const Score &b) {
-    //从大到小
-    return a.second > b.second;
-}
-
 void KWWrapper::__add__(int index, Keys &keys) {
     assert(index >= 0 and index < batch_size_);
     keys_[index].insert(keys_[index].end(), keys.begin(), keys.end());
@@ -22,8 +15,8 @@ void KWWrapper::__add__(int index, Keys &keys) {
 }
 
 KWWrapper::KWWrapper(std::shared_ptr<SlotsConfigure> &slot_conf, size_t batch_size) : slot_conf_(slot_conf),
-                                                                                   batch_size_(batch_size),
-                                                                                   dims_(0) {
+                                                                                      batch_size_(batch_size),
+                                                                                      dims_(0) {
     keys_.resize(batch_size_);
 }
 
@@ -39,7 +32,7 @@ void KWWrapper::add(int row, Keys &user_field_keys, Keys &item_field_keys, Keys 
 
 size_t &KWWrapper::size() { return batch_size_; }
 
-inline Keys &KWWrapper::get_all_keys() { return all_keys_; }
+Keys &KWWrapper::get_all_keys() { return all_keys_; }
 
 Weights &KWWrapper::weights() {
     if (weighs_.size() == 0) {
@@ -49,7 +42,7 @@ Weights &KWWrapper::weights() {
 }
 
 
-inline Keys &KWWrapper::operator[](int &row) {
+Keys &KWWrapper::operator[](int row) {
     return keys_[row];
 }
 

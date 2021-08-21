@@ -10,4 +10,18 @@ link_directories(/usr/local/lib)
 
 add_subdirectory(third/luban)
 
-add_library(longmen include/common.h include/loader.h include/config.h src/rank.cpp include/rank.h include/ps.h src/common.cpp src/ps.cpp src/loader.cpp src/mutils.cpp include/mutils.h src/config.cpp)
+set(SOURCE src/common.cpp src/config.cpp src/loader.cpp
+        src/longmen.cpp src/mutils.cpp src/ps.cpp src/rank.cpp)
+
+set(INCLUDE include/common.h include/common.h include/loader.h
+        include/longmen.h include/mutils.h include/ps.h include/rank.h)
+
+add_library(longmen SHARED ${INCLUDE} ${SOURCE})
+
+add_executable(test ${INCLUDE} ${SOURCE} src/test.cpp)
+
+add_executable(tf_tool src/tf_tool.cpp)
+
+target_link_libraries(longmen protobuf tcmalloc toolkit zip tensorflow stata glog)
+target_link_libraries(test protobuf toolkit zip tensorflow stata glog)
+target_link_libraries(tf_tool tensorflow)

@@ -5,12 +5,12 @@
 
 #include <math.h>
 
-static float sigmoid(float x);
+float sigmoid(float x);
 
 //把向量src中的值加到dst中
-static void vec_add(float *dst, float *src, int dim);
+void vec_add(float *dst, float *src, int dim);
 
 //向量的平方
-static float vec_square(float *src, int dim);
+float vec_square(float *src, int dim);
 
 #endif //LONGMEN_MUTILS_H

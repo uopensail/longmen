@@ -4,16 +4,19 @@
 #include <memory>
 #include "ps.h"
 #include "loader.h"
-#include <tensorflow/cc/saved_model/loader.h>
-#include <tensorflow/core/framework/graph.pb.h>
-#include <tensorflow/core/protobuf/meta_graph.pb.h>
+#include <tensorflow/c/c_api.h>
 
+static const char *tags = "serve";
+
+static void NoneOpDeAllocator(void *, size_t, void *) {}
 
 namespace model {
     class Rank {
     protected:
-        std::shared_ptr<ps::Client> ps_client_;
+        std::shared_ptr<::GlobalConfigure> global_config_;
         std::shared_ptr<loader::Extractor> extractor_;
+        std::shared_ptr<ps::Memory> ps_client_;
+
     public:
         Rank() = delete;
 
@@ -21,9 +24,11 @@ namespace model {
 
         Rank(const Rank &&) = delete;
 
-        Rank(std::shared_ptr<::GlobalConfigure> &config);
+        Rank(const std::shared_ptr<::GlobalConfigure> &config);
 
-        ~Rank() {}
+        virtual ~Rank() {}
+
+        virtual void reload_extractor(std::string path);
 
         virtual void call(tensorflow::Features &user_features, Recalls &recalls, Scores &scores) = 0;
     };
@@ -36,9 +41,9 @@ namespace model {
 
         LR(const LR &&) = delete;
 
-        LR(std::shared_ptr<::GlobalConfigure> &config);
+        LR(const std::shared_ptr<::GlobalConfigure> &config, std::string path = "");
 
-        ~LR() {}
+        virtual ~LR() {}
 
         virtual void call(tensorflow::Features &user_features, Recalls &recalls, Scores &scores);
     };
@@ -53,17 +58,35 @@ namespace model {
 
         FM(const FM &&) = delete;
 
-        FM(std::shared_ptr<::GlobalConfigure> &config);
+        FM(const std::shared_ptr<::GlobalConfigure> &config, std::string path = "");
 
-        ~FM() {}
+        virtual ~FM() {}
 
         virtual void call(tensorflow::Features &user_features, Recalls &recalls, Scores &scores);
     };
 
+
     class STF : public Rank {
     private:
-        std::shared_ptr<::GlobalConfigure> global_conf_;
+        int dims_;
+        std::string input_op_name_;
+        std::string output_op_name_;
+        std::string model_dir_;
+        TF_Graph *graph_;
+        TF_Session *session_;
 
+    public:
+        STF() = delete;
+
+        STF(const STF &) = delete;
+
+        STF(const STF &&) = delete;
+
+        STF(const std::shared_ptr<::GlobalConfigure> &config, std::string path = "");
+
+        virtual ~STF();
+
+        virtual void call(tensorflow::Features &user_features, Recalls &recalls, Scores &scores);
     };
 }
 

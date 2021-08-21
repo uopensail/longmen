@@ -7,7 +7,6 @@
 #include <unordered_map>
 #include <vector>
 #include <mutils.h>
-#include <glog/logging.h>
 #include "config.h"
 #include "cpptoml.h"
 #include "mutils.h"
@@ -22,7 +21,6 @@ using Score = std::pair<std::string, float>;
 using Scores = std::vector<Score>;
 using Recalls = std::vector<std::string>;
 
-static bool __score_cmp__(const Score &a, const Score &b);
 
 class KWWrapper {
 private:
@@ -52,9 +50,9 @@ public:
 
     size_t &size();
 
-    inline Keys &operator[](int &row);
+    Keys &operator[](int row);
 
-    inline Keys &get_all_keys();
+    Keys &get_all_keys();
 
     Weights &weights();
 

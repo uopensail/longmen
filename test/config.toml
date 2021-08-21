@@ -1,13 +1,3 @@
-# LongMen(龙门)
-
-这是对参数服务器和item池以及模型预测的封装
-
-这是线上推理的c++封装
-支持的配置如下：
-
-config.toml文件
-
-```
 [model_config]
 # 1:LR
 # 2:FM
@@ -16,7 +6,7 @@ type = 1
 
 # 如果是LR/FM，就是参数的保存地址，绝对路径
 # 如果是STF，就是模型的压缩包，包含了稠密层和稀疏层的参数，.zip结尾
-path = "模型的绝对路径"
+path = "../test/model.bin"
 
 # LR: dim必须是1
 # FM: 每个slot的dim必须相同，跟slot的配置会检查
@@ -38,43 +28,5 @@ sparse = "稀疏层在文件夹中的名字"
 slots = [1, 1, 1]
 
 [loader_config]
-config_path = "/绝对路径/特征处理的配置.toml"
-data_path = "/绝对路径/候选集.tfrecord"
-
-```
-
-
-feature_process.toml
-```
-[[single_features]]
-func = "kv"
-key = "d_s_id"
-name = "d_s_id"
-
-[single_features.params]
-slot_id = 0
-
-[[single_features]]
-func = "kv"
-key = "u_r_click"
-name = "u_r_click"
-
-[single_features.params]
-slot_id = 1
-
-[[cross_features]]
-keyA = "d_s_id"
-keyB = "u_r_click"
-func = "merge"
-name = "test"
-
-[cross_features.params]
-slot_id = 2
-
-```
-
-tfrecord文件生成示例
-```
-参考:
-test/prepare_tfrecord.py
-```
+config_path = "../test/fp.toml"
+data_path = "../test/test.tfrecord"

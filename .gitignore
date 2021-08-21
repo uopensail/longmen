@@ -1,3 +1,5 @@
 third/*
 .idea/
 cmake-build-debug/
+*.bin
+*.tfrecord
