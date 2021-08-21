@@ -25,8 +25,8 @@ dim = 1
 
 
 # 如果是STF模型，需要配置如下的参数
-# 可以通过tf_help工具查看所有的operation
-# 使用方法: ./tf_help model_path
+# 可以通过tf_tool工具查看所有的operation
+# 使用方法: ./tf_tool model_path
 
 input_op = "输入层的operation的名字"
 output_op = "输出层的operation的名字"
