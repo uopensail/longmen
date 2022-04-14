@@ -1,19 +1,18 @@
 #ifndef LONGMEN_COMMON_H
 #define LONGMEN_COMMON_H
 
-
+#include "config.h"
+#include "cpptoml.h"
+#include "mutils.h"
 #include <assert.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <mutils.h>
-#include "config.h"
-#include "cpptoml.h"
-#include "mutils.h"
 
 #define u_int64_t unsigned long long
-#define get_slot_id(x) (x >> 56)
 
+//这里把uint64中上8位置位slot, 后面是key
+#define get_slot_id(x) (x >> 56)
 
 using Keys = std::vector<u_int64_t>;
 using Weights = std::vector<float>;
@@ -21,8 +20,8 @@ using Score = std::pair<std::string, float>;
 using Scores = std::vector<Score>;
 using Recalls = std::vector<std::string>;
 
-
-class KWWrapper {
+class KWWrapper
+{
 private:
     std::shared_ptr<SlotsConfigure> slot_conf_;
     size_t batch_size_;
@@ -59,5 +58,4 @@ public:
     float *get_weights(u_int64_t &key);
 };
 
-
-#endif //LONGMEN_COMMON_H
+#endif // LONGMEN_COMMON_H

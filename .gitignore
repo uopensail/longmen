@@ -1,5 +1,8 @@
+
 third/*
 .idea/
 cmake-build-debug/
 *.bin
 *.tfrecord
+build/
+.vscode/

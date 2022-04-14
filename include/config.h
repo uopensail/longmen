@@ -4,23 +4,27 @@
 #include "cpptoml.h"
 
 //定义参数服务器的类型
-enum PSType {
-    Empty = 0,                              //错误
-    Memory = 1,                             //数据量比较小，放在内存
+enum PSType
+{
+    Empty = 0,  //错误
+    Memory = 1, //数据量比较小，放在内存
 };
 
 //定义模型的类型
-enum ModelType {
+enum ModelType
+{
     ERRModel = 0,
-    LRModel = 1,                            //lr模型
-    FMModel = 2,                            //fm模型
-    STFModel = 3,                           //带有embedding的TensorFlow模型
+    LRModel = 1,  // lr模型
+    FMModel = 2,  // fm模型
+    STFModel = 3, //带有sparse embedding的TensorFlow模型
 };
 
-class LoaderConfigure {
+class LoaderConfigure
+{
 private:
     std::string data_file_;
     std::string luban_config_file_;
+
 public:
     LoaderConfigure() = delete;
 
@@ -38,11 +42,13 @@ public:
 };
 
 //定义slots的信息
-class SlotsConfigure {
+class SlotsConfigure
+{
 private:
     int slots_;
     int *dims_;
     int *offset_;
+
 public:
     SlotsConfigure() = delete;
 
@@ -54,23 +60,24 @@ public:
 
     SlotsConfigure(const std::shared_ptr<cpptoml::table> &table);
 
-    int &get_dim(int slot) {
+    int &get_dim(int slot)
+    {
         return dims_[slot];
     }
-
 
     int &get_slots() { return slots_; }
 
     inline int &get_offset(int slot) { return offset_[slot]; }
-
 };
 
-class ModelConfigure {
+class ModelConfigure
+{
 protected:
     std::shared_ptr<cpptoml::table> table_;
     ModelType type_;
     std::string path_;
     int dim_;
+
 public:
     ModelConfigure() = delete;
 
@@ -89,11 +96,13 @@ public:
     int &get_dim() { return dim_; }
 };
 
-class STFModelConfigure : public ModelConfigure {
+class STFModelConfigure : public ModelConfigure
+{
 private:
     std::string input_op_name_;
     std::string output_op_name_;
     std::string sparse_embedding_path_;
+
 public:
     STFModelConfigure() = delete;
 
@@ -116,11 +125,13 @@ public:
     std::string &get_sparse_path() { return sparse_embedding_path_; }
 };
 
-class GlobalConfigure {
+class GlobalConfigure
+{
 private:
     std::shared_ptr<SlotsConfigure> slot_conf_;
     std::shared_ptr<LoaderConfigure> loader_conf_;
     std::shared_ptr<ModelConfigure> model_conf_;
+
 public:
     GlobalConfigure() = delete;
 
@@ -128,23 +139,24 @@ public:
 
     GlobalConfigure(const GlobalConfigure &&) = delete;
 
-
     GlobalConfigure(std::string config_file);
 
     ~GlobalConfigure() {}
 
-
-    std::shared_ptr<SlotsConfigure> &get_slot_conf() {
+    std::shared_ptr<SlotsConfigure> &get_slot_conf()
+    {
         return slot_conf_;
     }
 
-    std::shared_ptr<LoaderConfigure> &get_loader_conf() {
+    std::shared_ptr<LoaderConfigure> &get_loader_conf()
+    {
         return loader_conf_;
     }
 
-    std::shared_ptr<ModelConfigure> &get_model_conf() {
+    std::shared_ptr<ModelConfigure> &get_model_conf()
+    {
         return model_conf_;
     }
 };
 
-#endif //LONGMEN_CONFIG_H
+#endif // LONGMEN_CONFIG_H

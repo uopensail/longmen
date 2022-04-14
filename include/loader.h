@@ -1,23 +1,25 @@
 #ifndef LONGMEN_LOADER_H
 #define LONGMEN_LOADER_H
 
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <unordered_map>
+#include "common.h"
 #include "feature.pb.h"
 #include "toolkit.h"
-#include "common.h"
+#include <fstream>
+#include <iostream>
+#include <unordered_map>
+#include <vector>
 
-
-namespace loader {
+namespace loader
+{
     const std::string item_id_key = "d_s_id";
 
-    class Record {
+    class Record
+    {
     private:
         tensorflow::Features features_;
         Keys keys_;
         std::string record_id;
+
     public:
         Record() = delete;
 
@@ -36,12 +38,12 @@ namespace loader {
         ~Record();
     };
 
-    class Store {
+    class Store
+    {
     private:
         std::shared_ptr<luban::ToolKit> toolkit_;
         int size_;
         std::unordered_map<std::string, std::shared_ptr<Record>> pool_;
-
 
     public:
         Store() = delete;
@@ -57,11 +59,13 @@ namespace loader {
         ~Store();
     };
 
-    class Extractor {
+    class Extractor
+    {
     private:
         std::shared_ptr<SlotsConfigure> slot_conf_;
         std::shared_ptr<luban::ToolKit> toolkit_;
         std::shared_ptr<Store> store_;
+
     public:
         Extractor() = delete;
 
@@ -76,6 +80,6 @@ namespace loader {
         ::KWWrapper *call(tensorflow::Features &user_features, ::Recalls &recalls);
     };
 
-}//namespace loader
+} // namespace loader
 
-#endif //LONGMEN_LOADER_H
+#endif // LONGMEN_LOADER_H
