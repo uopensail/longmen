@@ -13,4 +13,4 @@ void vec_add(float *dst, float *src, int dim);
 //向量的平方
 float vec_square(float *src, int dim);
 
-#endif //LONGMEN_MUTILS_H
+#endif // LONGMEN_MUTILS_H

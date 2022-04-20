@@ -15,9 +15,9 @@ name = "u_d_install"
 slot_id = 1
 
 [[cross_features]]
+func = "merge"
 keyA = "d_s_id"
 keyB = "u_d_install"
-func = "merge"
 name = "test"
 
 [cross_features.params]

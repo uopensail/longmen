@@ -19,7 +19,8 @@ def transform(value):
     """
     if isinstance(value, str):
         return tf.train.Feature(
-            bytes_list=tf.train.BytesList(value=[value.encode('utf8', 'ignore')])
+            bytes_list=tf.train.BytesList(
+                value=[value.encode('utf8', 'ignore')])
         )
     if isinstance(value, int):
         return tf.train.Feature(
@@ -79,7 +80,8 @@ def main():
         d_s_4.append(tmp_4)
     write = tf.io.TFRecordWriter('test.tfrecord')
     for i in range(100):
-        dic = {'d_s_id': d_s_id[i], 'd_s_1': d_s_1[i], 'd_s_2': d_s_2[i], 'd_s_3': d_s_3[i], 'd_s_4': d_s_4[i]}
+        dic = {'d_s_id': d_s_id[i], 'd_s_1': d_s_1[i],
+               'd_s_2': d_s_2[i], 'd_s_3': d_s_3[i], 'd_s_4': d_s_4[i]}
         example = dic2example(dic)
         write.write(example.SerializeToString())
     write.close()

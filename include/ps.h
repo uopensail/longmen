@@ -1,19 +1,21 @@
 #ifndef LONGMEN_PS_H
 #define LONGMEN_PS_H
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <algorithm>
 #include "common.h"
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <string>
 
-namespace ps {
+namespace ps
+{
 
     int __sort__(const void *a, const void *b);
 
     float *binary_search(const char *value, const size_t &n, const size_t &size, u_int64_t &key);
 
-    class Memory {
+    class Memory
+    {
     private:
         std::shared_ptr<SlotsConfigure> slot_conf_;
         std::string path_;
@@ -37,5 +39,5 @@ namespace ps {
         void pull(KWWrapper &batch_kw);
     };
 
-}  // namespace ps
-#endif //LONGMEN_PS_H
+} // namespace ps
+#endif // LONGMEN_PS_H

@@ -1,17 +1,19 @@
 #ifndef LONGMEN_RANK_H
 #define LONGMEN_RANK_H
 
-#include <memory>
-#include "ps.h"
 #include "loader.h"
+#include "ps.h"
+#include <memory>
 #include <tensorflow/c/c_api.h>
 
 static const char *tags = "serve";
 
 static void NoneOpDeAllocator(void *, size_t, void *) {}
 
-namespace model {
-    class Rank {
+namespace model
+{
+    class Rank
+    {
     protected:
         std::shared_ptr<::GlobalConfigure> global_config_;
         std::shared_ptr<loader::Extractor> extractor_;
@@ -33,7 +35,8 @@ namespace model {
         virtual void call(tensorflow::Features &user_features, Recalls &recalls, Scores &scores) = 0;
     };
 
-    class LR : public Rank {
+    class LR : public Rank
+    {
     public:
         LR() = delete;
 
@@ -48,9 +51,11 @@ namespace model {
         virtual void call(tensorflow::Features &user_features, Recalls &recalls, Scores &scores);
     };
 
-    class FM : public Rank {
+    class FM : public Rank
+    {
     private:
         int dim_;
+
     public:
         FM() = delete;
 
@@ -65,8 +70,8 @@ namespace model {
         virtual void call(tensorflow::Features &user_features, Recalls &recalls, Scores &scores);
     };
 
-
-    class STF : public Rank {
+    class STF : public Rank
+    {
     private:
         int dims_;
         std::string input_op_name_;
@@ -90,5 +95,4 @@ namespace model {
     };
 }
 
-
-#endif //LONGMEN_RANK_H
+#endif // LONGMEN_RANK_H

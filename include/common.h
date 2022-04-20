@@ -9,7 +9,11 @@
 #include <unordered_map>
 #include <vector>
 
-#define u_int64_t unsigned long long
+#ifdef __APPLE__
+#define u_int64_t __uint64_t
+#elif __linux__
+#define u_int64_t uint64_t
+#endif
 
 //这里把uint64中上8位置位slot, 后面是key
 #define get_slot_id(x) (x >> 56)
