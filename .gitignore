@@ -5,3 +5,8 @@ cmake-build-debug/
 *.tfrecord
 build/
 .vscode/
+lib/
+cmake-build-release/
+cmake-build-debug/
+*.so
+*.dylib
