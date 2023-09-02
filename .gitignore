@@ -10,3 +10,5 @@ cmake-build-release/
 cmake-build-debug/
 *.so
 *.dylib
+build_cpp/
+lib/

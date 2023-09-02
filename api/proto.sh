@@ -1,1 +1,1 @@
-protoc -I/usr/local/include -I. --gofast_out=plugins=grpc:. *.proto
+protoc -I/usr/local/include -I. --go_out=. --go-grpc_out=.  *.proto

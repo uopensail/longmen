@@ -2,57 +2,49 @@ PWD = $(shell pwd)
 OS = $(shell go env GOOS)
 ARCH = $(shell go env GOARCH)
 PROJECT_NAME = longmen
-VERSION := $(shell git rev-parse --short HEAD)
+GITHASH := $(shell git rev-parse --short HEAD)
 BRANCH_NAME := $(shell git symbolic-ref -q --short HEAD || git describe --tags --exact-match)
-GOLDFLAGS += -X http._GITHASH_=$(VERSION).$(BRANCH_NAME)
+GOLDFLAGS += -X app.__GITHASH__=$(GITHASH).$(BRANCH_NAME)
 GOFLAGS = -ldflags "$(GOLDFLAGS)"
 .PHONY: build clean run
 
 PUBLISH_DIR=build
-all: build-dev
 
-third-build-release:
+all: build-prod
+third-dev:
 	cmake --version
-	git submodule update --init --recursive
-	mkdir -p cpp/cmake-build-release
-	mkdir -p lib
-	cd cpp/cmake-build-release && cmake .. && make && cp -r liblongmen.* ../../lib
-
-third-build-debug:
+	mkdir -pv build_cpp
+	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Debug && make
+	mkdir -pv build/
+	cp build_cpp/lib* build/
+	mkdir -pv third/lib/$(OS)/$(ARCH)/
+	cp build_cpp/lib* third/lib/$(OS)/$(ARCH)/
+third-prod:
 	cmake --version
-	git submodule update --init --recursive
-	mkdir -p cpp/cmake-build-debug
-	cd cpp/cmake-build-debug && cmake .. && make && cp -r cpp/cmake-build-debug/liblongmen.* ../../lib
-
-build-go-debug:
-	git submodule update --init --recursive
-	mkdir -pv $(PUBLISH_DIR)/lib
-	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISH_DIR)/lib/
-	export GOTRACEBACK=crash  && go build  -gcflags=all="-N -l" -o $(PUBLISH_DIR)/$(PROJECT_NAME) $(GOFLAGS)
-build-go-release:
-	git submodule update --init --recursive
+	mkdir -pv build_cpp
+	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Release && make
+	mkdir -pv build/
+	cp build_cpp/lib* build/
+	mkdir -pv third/lib/$(OS)/$(ARCH)/
+	cp build_cpp/lib* third/lib/$(OS)/$(ARCH)/
+build: third-prod
 	mkdir -pv $(PUBLISH_DIR)/lib
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISH_DIR)/lib/
 	go build -o $(PUBLISH_DIR)/$(PROJECT_NAME) $(GOFLAGS)
-
-build-dev: clean build-go-debug
-	cp -rf conf/dev $(PUBLISH_DIR)/conf
-	bash gen_version.sh $@ build/conf/auto_gen_version.json
-build-test: clean build-go-debug
-	cp -rf conf/test $(PUBLISH_DIR)/conf
-	bash gen_version.sh $@ build/conf/auto_gen_version.json
-build-pre: clean build-go-release
-	cp -rf conf/pre $(PUBLISH_DIR)/conf
-	bash gen_version.sh $@ build/conf/auto_gen_version.json
-build-prod: clean build-go-release
-	cp -rf conf/prod $(PUBLISH_DIR)/conf
-	bash gen_version.sh $@ build/conf/auto_gen_version.json
-build-prod-ali: clean build-go-release
-	cp -rf conf/prod-ali $(PUBLISH_DIR)/conf
-	bash gen_version.sh $@ build/conf/auto_gen_version.json
+	cp -rf conf/prod/* $(PUBLISH_DIR)/conf
+build-dev: third-dev
+	mkdir -pv $(PUBLISH_DIR)/lib
+	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISH_DIR)/lib/
+	export GOTRACEBACK=crash  && go build  -gcflags=all="-N -l" -o $(PUBLISH_DIR)/$(PROJECT_NAME) $(GOFLAGS)
+	cp -rf conf/dev/* $(PUBLISH_DIR)/conf
+build-prod: build
+	mkdir -pv $(PUBLISH_DIR)/lib
+	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISH_DIR)/lib/
+	go build -o $(PUBLISH_DIR)/$(PROJECT_NAME) $(GOFLAGS)
+	cp -rf conf/prod/* $(PUBLISH_DIR)/conf
 clean:
 	rm -rf ./build
-	rm -rf ./build_tmp
-	gcc -v
+	rm -rf ./build_cpp
+	mkdir -pv build/conf
 run: build-dev
-	./build/$(PROJECT_NAME) -config="./build/conf"
+	./${PUBLISH_DIR}/$(PROJECT_NAME) -config="./build/conf"

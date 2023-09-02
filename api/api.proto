@@ -1,7 +1,6 @@
 syntax = "proto3";
-
+option go_package = "./;api";
 package api;
-option go_package = "api";
 
 message Record {
   string id = 1;
@@ -23,6 +22,6 @@ message Response {
   map<string, string> extras = 4;
 }
 
-service Service {
-  rpc Service(Request) returns (Response) {}
+service Rank {
+  rpc Rank(Request) returns (Response) {}
 }
