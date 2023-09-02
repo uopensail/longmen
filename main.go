@@ -20,7 +20,7 @@ import (
 
 func run(configFilePath string, logDir string) *app.App {
 	config.AppConf.Init(configFilePath)
-	zlog.InitLogger(config.AppConf.ServerName, config.AppConf.Debug, logDir)
+	zlog.InitLogger(config.AppConf.Name, config.AppConf.Debug, logDir)
 
 	app := app.NewApp()
 	runGRPC(app.GRPCAPIRegister)
@@ -90,12 +90,12 @@ func main() {
 
 	app := run(*configFilePath, *logDir)
 
-	if len(config.AppConf.ServerName) <= 0 {
-		panic("config.ServerName nil")
+	if len(config.AppConf.ProjectName) <= 0 {
+		panic("config.ProjectName nil")
 	}
 
 	runPProf(config.AppConf.PProfPort)
-	promeExport := runProme(config.AppConf.ServerName, config.AppConf.PromePort)
+	promeExport := runProme(config.AppConf.ProjectName, config.AppConf.PromePort)
 	signalChanel := make(chan os.Signal, 1)
 	signal.Notify(signalChanel, syscall.SIGINT, syscall.SIGTERM)
 	fmt.Println(time.Now().Format("2006-01-02 15:04:05"), " app running....")
