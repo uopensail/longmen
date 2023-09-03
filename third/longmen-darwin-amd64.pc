@@ -1,0 +1,18 @@
+PCDIR=${pcfiledir}
+
+Name: longmen
+Description: longmen
+Version: 1
+
+Cflags: \
+	-I${PCDIR}/longmen/include
+
+Libs: \
+    -L${PCDIR}/lib/darwin/amd64 \
+	-L/usr/local/lib \
+	-llongmen \
+	-lstdc++ \
+	-lm \
+	-lc10 \
+	-ltorch_cpu \
+	-lpthread
