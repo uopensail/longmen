@@ -10,7 +10,7 @@ Cflags: \
 Libs: \
     -L${PCDIR}/lib/darwin/amd64 \
 	-L/usr/local/lib \
-	-llongmen \
+	--static llongmen \
 	-lstdc++ \
 	-lm \
 	-lc10 \

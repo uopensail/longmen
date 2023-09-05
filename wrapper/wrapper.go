@@ -89,7 +89,7 @@ func (m *ModelWrapper) Rank(pool *PoolWrapper, r *api.Request) *api.Response {
 	}
 
 	scores := make([]float32, len(r.Records))
-	C.longmen_forward(m.mPtr, pool.mPtr, (*C.char)(unsafe.Pointer(&r.UserFeatures[0])),
+	C.longmen_forward(m.mPtr, pool.mPtr, (*C.char)(unsafe.Pointer(&s2b(r.UserFeatures)[0])),
 		C.int(len(r.UserFeatures)), unsafe.Pointer(&items[0]), (*C.int)(unsafe.Pointer(&lens[0])),
 		C.int(len(r.Records)), (*C.float)(unsafe.Pointer(&scores[0])))
 

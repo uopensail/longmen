@@ -16,6 +16,6 @@ SET(LUBAN_SOURCE  ../luban/src/builtin.cpp ../luban/src/common.cpp
 
 SET(LONGMEN_SOURCE src/longmen.cpp src/model.cpp ${LUBAN_SOURCE})
 
-add_library(longmen STATIC ${LONGMEN_SOURCE})
+add_library(longmen SHARED ${LONGMEN_SOURCE})
 
 target_link_libraries(longmen c10 torch_cpu)

@@ -35,7 +35,7 @@ build: third-prod
 build-dev: third-dev
 	mkdir -pv $(PUBLISH_DIR)/lib
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISH_DIR)/lib/
-	export GOTRACEBACK=crash  && go build  -gcflags=all="-N -l" -o $(PUBLISH_DIR)/$(PROJECT_NAME) $(GOFLAGS)
+	export GOTRACEBACK=crash  && go build -gcflags=all="-N -l" -o $(PUBLISH_DIR)/$(PROJECT_NAME) $(GOFLAGS)
 	cp -rf conf/dev/* $(PUBLISH_DIR)/conf
 build-prod: build
 	mkdir -pv $(PUBLISH_DIR)/lib

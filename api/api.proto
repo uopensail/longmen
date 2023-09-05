@@ -10,7 +10,7 @@ message Record {
 message Request {
   string modelId = 1;
   string userId = 2;
-  bytes userFeatures = 3;
+  string userFeatures = 3;
   repeated Record records = 4;
   map<string, string> extras = 5;
 }

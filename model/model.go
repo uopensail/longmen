@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const POOL_KEY_FORMAT = "/longmen/models/%s"
+const POOL_KEY_FORMAT = "/longmen/pools/%s"
 const MODEL_KEY_FORMAT = "/longmen/models/%s"
 
 type PoolWarehouse struct {
@@ -26,7 +26,7 @@ type PoolWarehouse struct {
 func (w *PoolWarehouse) Get(key string) *PoolInstance {
 	stat := prome.NewStat("PoolWarehouse.Get")
 	defer stat.End()
-	w.RUnlock()
+	w.RLock()
 	defer w.RUnlock()
 	if pool, ok := w.ins[key]; ok {
 		return pool
@@ -50,9 +50,9 @@ func (w *PoolWarehouse) reflush(name string) {
 	defer stat.End()
 
 	runtimeViper := viper.New()
-	runtimeViper.AddRemoteProvider("etcd",
+	runtimeViper.AddRemoteProvider("etcd3",
 		strings.Join(config.AppConf.EtcdConfig.Endpoints, ","),
-		fmt.Sprint(POOL_KEY_FORMAT, name))
+		fmt.Sprintf(POOL_KEY_FORMAT, name))
 	runtimeViper.SetConfigType("json")
 	err := runtimeViper.ReadRemoteConfig()
 	if err != nil {
@@ -114,9 +114,9 @@ func (w *ModelWarehouse) reflush(name string) {
 	defer stat.End()
 
 	runtimeViper := viper.New()
-	runtimeViper.AddRemoteProvider("etcd",
+	runtimeViper.AddRemoteProvider("etcd3",
 		strings.Join(config.AppConf.Endpoints, ","),
-		fmt.Sprint(MODEL_KEY_FORMAT, name))
+		fmt.Sprintf(MODEL_KEY_FORMAT, name))
 	runtimeViper.SetConfigType("json")
 	err := runtimeViper.ReadRemoteConfig()
 	if err != nil {

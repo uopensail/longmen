@@ -8,9 +8,9 @@ Cflags: \
 	-I${PCDIR}/longmen/include
 
 Libs: \
-    ${PCDIR}/lib/darwin/arm64 \
+    -L${PCDIR}/lib/darwin/arm64 \
 	-L/usr/local/lib \
-	-llongmen \
+	--static llongmen \
 	-lstdc++ \
 	-lm \
 	-lc10 \

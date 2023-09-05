@@ -9,8 +9,9 @@ Cflags: \
 
 Libs: \
 	-L${PCDIR}/lib/linux/amd64 \
-	--static llongmen \
 	-L/usr/local/lib \
+	-L/usr/local/libtorch/lib \
+	--static -llongmen \
 	-lstdc++ \
 	-lm \
 	-lc10 \
