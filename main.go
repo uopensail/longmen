@@ -49,6 +49,11 @@ func runGRPC(registerFunc func(server *grpc.Server)) {
 
 func runHTTPServe(registerFunc func(*gin.Engine)) {
 	go func() {
+		if config.AppConf.Debug {
+			gin.SetMode(gin.DebugMode)
+		} else {
+			gin.SetMode(gin.ReleaseMode)
+		}
 		ginEngine := gin.New()
 		ginEngine.Use(gin.Recovery())
 		conf := config.AppConf.ServerConfig
@@ -74,10 +79,7 @@ func runPProf(port int) {
 func runProme(projectName string, port int) *prome.Exporter {
 	promeExport := prome.NewExporter(projectName)
 	go func() {
-		err := promeExport.Start(port)
-		if err != nil {
-			panic(err)
-		}
+		promeExport.Start(port)
 	}()
 
 	return promeExport
@@ -102,8 +104,8 @@ func main() {
 
 	<-signalChanel
 
-	app.Close()
 	promeExport.Close()
+	app.Close()
 
 	fmt.Println(time.Now().Format("2006-01-02 15:04:05"), " app exit....")
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 	"github.com/uopensail/ulib/prome"
 	"github.com/uopensail/ulib/zlog"
 	"go.uber.org/zap"
@@ -41,7 +42,9 @@ func (w *PoolWarehouse) Close() {
 	w.Lock()
 	defer w.Unlock()
 	for _, pool := range w.ins {
-		pool.Release()
+		if pool != nil {
+			pool.Release()
+		}
 	}
 }
 
@@ -105,7 +108,9 @@ func (w *ModelWarehouse) Close() {
 	w.Lock()
 	defer w.Unlock()
 	for _, model := range w.ins {
-		model.Release()
+		if model != nil {
+			model.Release()
+		}
 	}
 }
 

@@ -3,7 +3,7 @@ package wrapper
 /*
 #cgo darwin,amd64 pkg-config: ${SRCDIR}/../third/longmen-darwin-amd64.pc
 #cgo darwin,arm64 pkg-config: ${SRCDIR}/../third/longmen-darwin-arm64.pc
-#cgo linux,amd64 pkg-config:  ${SRCDIR}/../third/longmen-linux-amd64.pc
+#cgo linux,amd64 pkg-config: ${SRCDIR}/../third/longmen-linux-amd64.pc
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
