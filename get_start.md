@@ -3,12 +3,12 @@
 
 ## Introduction
 
-[luban] (https://github.com/uopensail/luban) is a feature processing tool, [damo-embedding] (https://github.com/uopensail/damo-embedding) is a pytorch-based model training tool, [longmen]( https://github.com/uopensail/longmen) is an online inference service based on the model exported by DAMO.
+[luban](https://github.com/uopensail/luban) is a feature processing tool, [damo-embedding](https://github.com/uopensail/damo-embedding) is a pytorch-based model training tool, [longmen](https://github.com/uopensail/longmen) is an online inference service based on the model exported by DAMO.
 
 
 ## Feature Processing
 
-We use [Criteo_dataset | Kaggle] (https://www.kaggle.com/datasets/mrkmakr/criteo-dataset) dataset as an example for feature processing.
+We use [Criteo_dataset | Kaggle](https://www.kaggle.com/datasets/mrkmakr/criteo-dataset) dataset as an example for feature processing.
 
 Data description: There are 39 features in total, of which the first 13 are integer features, and the last 26 are category features and string types. Feature data is stored in txt form, and then with '\t' as a separator, the first line is data, and the feature is not named. The first column is label.
 
