@@ -1,5 +1,5 @@
-models = ["test_model"]
-pools = ["test_pool"]
+model = "test_model"
+pool = "test_pool"
 
 [server]
 project_name = "longmen"

@@ -12,73 +12,42 @@ package wrapper
 import "C"
 
 import (
+	"fmt"
 	"longmen/api"
+	"longmen/config"
 	"reflect"
 	"unsafe"
 
 	"github.com/uopensail/ulib/prome"
 )
 
-type PoolWrapper struct {
-	mPtr  unsafe.Pointer
-	mPath string
-	mVer  string
-	mKey  string
+type Wrapper struct {
+	Ptr   unsafe.Pointer
+	MConf *config.ModelConfigure
+	PConf *config.PoolConfigure
 }
 
-func NewPoolWrapper(path, version, key string) *PoolWrapper {
-	return &PoolWrapper{
-		mPtr: C.longmen_new_pool((*C.char)(unsafe.Pointer(&s2b(path)[0])), C.int(len(path)),
-			(*C.char)(unsafe.Pointer(&s2b(key)[0])), C.int(len(key))),
-		mPath: path,
-		mVer:  version,
-		mKey:  key,
+func NewWrapper(mConf *config.ModelConfigure, pConf *config.PoolConfigure) *Wrapper {
+	model := C.longmen_new_model((*C.char)(unsafe.Pointer(&s2b(pConf.Path)[0])), C.int(len(pConf.Path)),
+		(*C.char)(unsafe.Pointer(&s2b(pConf.Key)[0])), C.int(len(pConf.Key)),
+		(*C.char)(unsafe.Pointer(&s2b(mConf.Kit)[0])), C.int(len(mConf.Kit)),
+		(*C.char)(unsafe.Pointer(&s2b(mConf.Path)[0])), C.int(len(mConf.Path)))
+	return &Wrapper{
+		Ptr:   model,
+		MConf: mConf,
+		PConf: pConf,
 	}
 }
 
-func (pool *PoolWrapper) Release() {
-	if pool.mPtr != nil {
-		C.longmen_del_pool(pool.mPtr)
-	}
-	pool.mPtr = nil
-}
-
-func (pool *PoolWrapper) Version() string {
-	return pool.mVer
-}
-
-type ModelWrapper struct {
-	mPtr  unsafe.Pointer
-	mPath string
-	mVer  string
-	mKit  string
-}
-
-func NewModelWrapper(path, version, kit string) *ModelWrapper {
-	return &ModelWrapper{
-		mPtr: C.longmen_new_model((*C.char)(unsafe.Pointer(&s2b(kit)[0])),
-			C.int(len(kit)),
-			(*C.char)(unsafe.Pointer(&s2b(path)[0])),
-			C.int(len(path))),
-		mPath: path,
-		mVer:  version,
-		mKit:  kit,
+func (w *Wrapper) Release() {
+	if w.Ptr != nil {
+		C.longmen_del_model(w.Ptr)
+		w.Ptr = nil
 	}
 }
 
-func (m *ModelWrapper) Release() {
-	if m.mPtr != nil {
-		C.longmen_del_model(m.mPtr)
-	}
-	m.mPtr = nil
-}
-
-func (m *ModelWrapper) Version() string {
-	return m.mVer
-}
-
-func (m *ModelWrapper) Rank(pool *PoolWrapper, r *api.Request) *api.Response {
-	stat := prome.NewStat("ModelWrapper.Rank")
+func (w *Wrapper) Rank(r *api.Request) *api.Response {
+	stat := prome.NewStat("Wrapper.Rank")
 	defer stat.End()
 
 	items := make([]*C.char, len(r.Records))
@@ -88,9 +57,11 @@ func (m *ModelWrapper) Rank(pool *PoolWrapper, r *api.Request) *api.Response {
 		lens[i] = len(r.Records[i].Id)
 	}
 
+	fmt.Printf("%v\n", lens)
+
 	scores := make([]float32, len(r.Records))
-	C.longmen_forward(m.mPtr, pool.mPtr, (*C.char)(unsafe.Pointer(&s2b(r.UserFeatures)[0])),
-		C.int(len(r.UserFeatures)), unsafe.Pointer(&items[0]), (*C.int)(unsafe.Pointer(&lens[0])),
+	C.longmen_forward(w.Ptr, (*C.char)(unsafe.Pointer(&s2b(r.UserFeatures)[0])),
+		C.int(len(r.UserFeatures)), unsafe.Pointer(&items[0]), unsafe.Pointer(&lens[0]),
 		C.int(len(r.Records)), (*C.float)(unsafe.Pointer(&scores[0])))
 
 	for i := 0; i < len(r.Records); i++ {
@@ -102,8 +73,8 @@ func (m *ModelWrapper) Rank(pool *PoolWrapper, r *api.Request) *api.Response {
 		UserId:  r.UserId,
 		Records: r.Records,
 		Extras: map[string]string{
-			"mVer": m.mVer,
-			"pVer": pool.mVer,
+			"mVer": w.MConf.Version,
+			"pVer": w.PConf.Version,
 		},
 	}
 	stat.SetCounter(len(r.Records))

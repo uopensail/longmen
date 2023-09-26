@@ -1,7 +1,7 @@
 //
 // `LongMen` - 'Torch Model inference in c++'
 // Copyright (C) 2019 - present timepi <timepi123@gmail.com>
-// LuBan is provided under: GNU Affero General Public License (AGPL3.0)
+// LongMen is provided under: GNU Affero General Public License (AGPL3.0)
 // https://www.gnu.org/licenses/agpl-3.0.html unless stated otherwise.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -20,27 +20,38 @@
 
 #pragma once
 
+#include "toolkit.h"
+#include <filesystem>
 #include <torch/script.h>
 #include <vector>
 
-#include <filesystem>
+class Tensor {
+public:
+  Tensor() = delete;
+  Tensor(int64_t rows, int64_t cols, int64_t stride, torch::Dtype type);
+  ~Tensor();
+  void set_row(int64_t row, char *data);
+  void print();
 
-#include "toolkit.h"
-
-class TorchModel;
+public:
+  int64_t m_rows;
+  int64_t m_cols;
+  int64_t m_stride;
+  torch::Dtype m_type;
+  char *m_data;
+};
 
 class Input {
 public:
   Input() = delete;
-  Input(std::shared_ptr<luban::Matrix> matrix);
-  Input(const Input &input);
-  Input(const Input &&input);
-  Input &operator=(const Input &input);
-  ~Input() = default;
+  Input(int size);
+  ~Input();
+  Tensor *&operator[](int index);
+  void print();
 
-private:
-  std::shared_ptr<luban::Matrix> matrix_;
-  friend class TorchModel;
+public:
+  int m_size;
+  Tensor **m_tensors;
 };
 
 class TorchModel {
@@ -50,26 +61,10 @@ public:
   TorchModel(const TorchModel &&) = delete;
   TorchModel(std::string_view path);
   ~TorchModel();
-  void forward(std::shared_ptr<luban::Matrices> inputs, float *result);
+  void forward(Input &inputs, float *result);
 
 private:
   torch::jit::Module module_;
-};
-
-class Pool {
-public:
-  Pool() = delete;
-  Pool(const Pool &) = delete;
-  Pool(const Pool &&) = delete;
-  Pool(std::string_view path, std::string_view key);
-  ~Pool() = default;
-  void load();
-  luban::SharedFeaturesPtr operator[](std::string_view item);
-
-private:
-  std::string path_;
-  std::string key_;
-  std::unordered_map<std::string, luban::SharedFeaturesPtr> items_;
 };
 
 class Model {
@@ -77,14 +72,16 @@ public:
   Model() = delete;
   Model(const Model &) = delete;
   Model(const Model &&) = delete;
-  Model(std::string_view toolkit, std::string_view model);
+  Model(std::string_view pool, std::string_view key, std::string_view toolkit,
+        std::string_view model);
   ~Model() = default;
-  void forward(Pool *pool, char *user_features, size_t len, char **items,
-               int *lens, int size, float *scores);
+  void forward(char *user_features, size_t len, char **items, int64_t *lens,
+               int size, float *scores);
 
 private:
-  std::shared_ptr<luban::Toolkit> toolkit_;
-  std::shared_ptr<TorchModel> model_;
+  std::shared_ptr<luban::Toolkit> m_toolkit;
+  std::shared_ptr<TorchModel> m_model;
+  std::unordered_map<std::string, std::shared_ptr<luban::Rows>> m_pool;
 };
 
 #endif // LONGMAN_MODEL_H

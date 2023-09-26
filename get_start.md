@@ -25,7 +25,7 @@ Because here is an example, we are only doing demonstrations, not using the resu
 
 ```json
 {
-    "features": [
+    "user_features": [
         {
             "name": "I1",
             "type": 1,
@@ -294,6 +294,15 @@ Because here is an example, we are only doing demonstrations, not using the resu
         },
         {
             "name": "C26",
+            "type": 2,
+            "hash": true,
+            "padding": 0,
+            "dim": 1
+        }
+    ],
+    "item_features":[
+        {
+            "name": "ID",
             "type": 2,
             "hash": true,
             "padding": 0,

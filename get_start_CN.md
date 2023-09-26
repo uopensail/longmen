@@ -26,7 +26,7 @@
 
 ```json
 {
-    "features": [
+    "user_features": [
         {
             "name": "I1",
             "type": 1,
@@ -301,6 +301,15 @@
             "dim": 1
         }
     ],
+    "item_features":[
+        {
+            "name": "ID",
+            "type": 2,
+            "hash": true,
+            "padding": 0,
+            "dim": 1
+        }
+    ],
     "groups": [
         [
             "I1",
@@ -537,7 +546,6 @@ def dump_model(model: torch.nn.Module):
    ```json
    {
        "path":"/tmp/longmen/model.pt",
-       "pool": "test_pool",
        "kit": "/tmp/longmen/new_config_path.json",
        "version": "1"
    }
@@ -552,7 +560,7 @@ import etcd3
 def write_config_to_etcd(endpoint,port, pool_config, model_config):
     client = etcd3.client(host=endpoint, port=port)
     pool_name, model_name = "test_pool", "test_model"
-    pool_key = "/longmen/pools/%s" % pool_name
+    pool_key = "/pools/%s" % pool_name
     model_key = "/longmen/models/%s" % model_name
     client.put(pool_key, json.dumps(pool_config))
     client.put(model_key, json.dumps(model_config))
