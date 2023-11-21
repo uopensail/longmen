@@ -1,14 +1,17 @@
-PWD = $(shell pwd)
-OS = $(shell go env GOOS)
-ARCH = $(shell go env GOARCH)
-PROJECT_NAME = longmen
-GITHASH := $(shell git rev-parse --short HEAD)
-BRANCH_NAME := $(shell git symbolic-ref -q --short HEAD || git describe --tags --exact-match)
-GOLDFLAGS += -X app.__GITHASH__=$(GITHASH).$(BRANCH_NAME)
+CURDIR:=$(shell pwd)
+
+OS:=$(shell uname | tr '[A-Z]' '[a-z]')
+ARCH:=$(shell uname | tr '[A-Z]' '[a-z]')
+.PHONY: build clean run
+
+GITCOMMITHASH := $(shell git rev-parse --short HEAD)
+GITBRANCHNAME := $(shell git symbolic-ref -q --short HEAD || git describe --tags --exact-match)
+GOLDFLAGS += -X handler.__GITCOMMITINFO__=$(GITCOMMITHASH).${GITBRANCHNAME}
 GOFLAGS = -ldflags "$(GOLDFLAGS)"
 .PHONY: build clean run
 
-PUBLISH_DIR=build
+PUBLISHDIR=${CURDIR}/dist
+PROJECT_NAME=longmen
 
 all: build-prod
 third-dev:
