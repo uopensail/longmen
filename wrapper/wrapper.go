@@ -12,73 +12,60 @@ package wrapper
 import "C"
 
 import (
-	"fmt"
-	"longmen/api"
-	"longmen/config"
 	"reflect"
 	"unsafe"
 
 	"github.com/uopensail/ulib/prome"
+	"github.com/uopensail/ulib/utils"
 )
 
 type Wrapper struct {
-	Ptr   unsafe.Pointer
-	MConf *config.ModelConfigure
-	PConf *config.PoolConfigure
+	utils.Reference
+	Ptr unsafe.Pointer
 }
 
-func NewWrapper(mConf *config.ModelConfigure, pConf *config.PoolConfigure) *Wrapper {
-	model := C.longmen_new_model((*C.char)(unsafe.Pointer(&s2b(pConf.Path)[0])), C.int(len(pConf.Path)),
-		(*C.char)(unsafe.Pointer(&s2b(pConf.Key)[0])), C.int(len(pConf.Key)),
-		(*C.char)(unsafe.Pointer(&s2b(mConf.Kit)[0])), C.int(len(mConf.Kit)),
-		(*C.char)(unsafe.Pointer(&s2b(mConf.Path)[0])), C.int(len(mConf.Path)))
-	return &Wrapper{
-		Ptr:   model,
-		MConf: mConf,
-		PConf: pConf,
+func NewWrapper(poolPath, keyField, lubanCfgPath, modelPath string) *Wrapper {
+	model := C.longmen_new_model((*C.char)(unsafe.Pointer(&s2b(poolPath)[0])), C.int(len(poolPath)),
+		(*C.char)(unsafe.Pointer(&s2b(keyField)[0])), C.int(len(keyField)),
+		(*C.char)(unsafe.Pointer(&s2b(lubanCfgPath)[0])), C.int(len(lubanCfgPath)),
+		(*C.char)(unsafe.Pointer(&s2b(modelPath)[0])), C.int(len(modelPath)))
+	w := &Wrapper{
+		Ptr: model,
 	}
-}
 
-func (w *Wrapper) Release() {
-	if w.Ptr != nil {
-		C.longmen_del_model(w.Ptr)
-		w.Ptr = nil
+	w.CloseHandler = func() {
+		if w.Ptr != nil {
+			C.longmen_del_model(w.Ptr)
+			w.Ptr = nil
+		}
 	}
+	return w
 }
 
-func (w *Wrapper) Rank(r *api.Request) *api.Response {
+func (w *Wrapper) Close() {
+	w.Reference.LazyFree(1)
+}
+
+func (w *Wrapper) Rank(userFeatureJson string, itemIds []string) []float32 {
 	stat := prome.NewStat("Wrapper.Rank")
 	defer stat.End()
+	w.Retain()
+	defer w.Release()
 
-	items := make([]*C.char, len(r.Records))
-	lens := make([]int, len(r.Records))
-	for i := 0; i < len(r.Records); i++ {
-		items[i] = (*C.char)(unsafe.Pointer(&s2b(r.Records[i].Id)[0]))
-		lens[i] = len(r.Records[i].Id)
+	items := make([]*C.char, len(itemIds))
+	lens := make([]int, len(itemIds))
+	for i := 0; i < len(itemIds); i++ {
+		items[i] = (*C.char)(unsafe.Pointer(&s2b(itemIds[i])[0]))
+		lens[i] = len(itemIds[i])
 	}
 
-	fmt.Printf("%v\n", lens)
+	scores := make([]float32, len(itemIds))
+	C.longmen_forward(w.Ptr, (*C.char)(unsafe.Pointer(&s2b(userFeatureJson)[0])),
+		C.int(len(userFeatureJson)), unsafe.Pointer(&items[0]), unsafe.Pointer(&lens[0]),
+		C.int(len(itemIds)), (*C.float)(unsafe.Pointer(&scores[0])))
 
-	scores := make([]float32, len(r.Records))
-	C.longmen_forward(w.Ptr, (*C.char)(unsafe.Pointer(&s2b(r.UserFeatures)[0])),
-		C.int(len(r.UserFeatures)), unsafe.Pointer(&items[0]), unsafe.Pointer(&lens[0]),
-		C.int(len(r.Records)), (*C.float)(unsafe.Pointer(&scores[0])))
-
-	for i := 0; i < len(r.Records); i++ {
-		r.Records[i].Score = scores[i]
-	}
-
-	resp := &api.Response{
-		Status:  0,
-		UserId:  r.UserId,
-		Records: r.Records,
-		Extras: map[string]string{
-			"mVer": w.MConf.Version,
-			"pVer": w.PConf.Version,
-		},
-	}
-	stat.SetCounter(len(r.Records))
-	return resp
+	stat.SetCounter(len(itemIds))
+	return scores
 }
 
 func s2b(s string) (b []byte) {

@@ -13,40 +13,39 @@ import (
 	"go.uber.org/zap"
 )
 
+type EnvConfig struct {
+	Finder  commonconfig.FinderConfig `json:"finder" toml:"finder"`
+	WorkDir string                    `json:"work_dir" toml:"work_dir"`
+}
+
 const POOL_KEY_FORMAT = "/pools/%s"
 const MODEL_KEY_FORMAT = "/longmen/models/%s"
 
-type PoolConfigure struct {
+type PoolConfig struct {
 	Path    string `json:"path" toml:"path" yaml:"path"`
 	Key     string `json:"key" toml:"key" yaml:"key"`
 	Version string `json:"version" toml:"version" yaml:"version"`
 }
 
-type ModelConfigure struct {
+type ModelConfig struct {
 	Path    string `json:"path" toml:"path" yaml:"path"`
 	Kit     string `json:"kit" toml:"kit" yaml:"kit"`
 	Version string `json:"version" toml:"version" yaml:"version"`
 }
 
+type PoolModelConfig struct {
+	ModelConfig `json:"model" toml:"model" yaml:"model"`
+	PoolConfig  `json:"pool" toml:"pool" yaml:"pool"`
+}
+
 type AppConfig struct {
 	commonconfig.ServerConfig `json:"server" toml:"server" yaml:"server"`
+	EnvConfig                 `json:"env" toml:"env" yaml:"env"`
 	Pool                      string `json:"pool" toml:"pool" yaml:"pool"`
 	Model                     string `json:"model" toml:"model" yaml:"model"`
 }
 
-func (conf *AppConfig) Init(filePath string) {
-	fileData, err := os.ReadFile(filePath)
-	if err != nil {
-		panic(err)
-	}
-	if strings.HasSuffix(filePath, ".toml") {
-		if _, err := toml.Decode(string(fileData), conf); err != nil {
-			panic(err)
-		}
-	}
-}
-
-func (conf *AppConfig) GetPoolConfig() (*PoolConfigure, error) {
+func (conf *AppConfig) GetPoolConfig() (*PoolConfig, error) {
 	stat := prome.NewStat("AppConfig.GetPoolConfig")
 	defer stat.End()
 
@@ -61,7 +60,7 @@ func (conf *AppConfig) GetPoolConfig() (*PoolConfigure, error) {
 		zlog.LOG.Error("viper read remote config error", zap.Error(err))
 		return nil, err
 	}
-	poolConf := &PoolConfigure{}
+	poolConf := &PoolConfig{}
 	err = runtimeViper.Unmarshal(poolConf)
 
 	if err != nil {
@@ -72,7 +71,7 @@ func (conf *AppConfig) GetPoolConfig() (*PoolConfigure, error) {
 	return poolConf, nil
 }
 
-func (conf *AppConfig) GetModelConfig() (*ModelConfigure, error) {
+func (conf *AppConfig) GetModelConfig() (*ModelConfig, error) {
 	stat := prome.NewStat("AppConfig.GetModelConfig")
 	defer stat.End()
 
@@ -87,7 +86,7 @@ func (conf *AppConfig) GetModelConfig() (*ModelConfigure, error) {
 		zlog.LOG.Error("viper read remote config error", zap.Error(err))
 		return nil, err
 	}
-	modelConf := &ModelConfigure{}
+	modelConf := &ModelConfig{}
 	err = runtimeViper.Unmarshal(modelConf)
 
 	if err != nil {
@@ -98,4 +97,18 @@ func (conf *AppConfig) GetModelConfig() (*ModelConfigure, error) {
 	return modelConf, nil
 }
 
-var AppConf AppConfig
+var AppConfigInstance AppConfig
+
+func (conf *AppConfig) Init(filePath string) {
+	fData, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Errorf("ioutil.ReadFile error: %s", err)
+		panic(err)
+	}
+	_, err = toml.Decode(string(fData), conf)
+	if err != nil {
+		fmt.Errorf("Unmarshal error: %s", err)
+		panic(err)
+	}
+	fmt.Printf("InitAppConfig:%v yaml:%s\n", conf, string(fData))
+}

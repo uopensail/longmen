@@ -9,6 +9,12 @@ include_directories(/usr/include)
 include_directories(include)
 link_directories(/usr/local/lib)
 
+# Set the path to the PyTorch installation directory
+set(Torch_DIR /usr/local/lib/libtorch/share/cmake/Torch)
+
+# Find Torch
+find_package(Torch REQUIRED)
+
 SET(LUBAN_SOURCE  ../luban/src/builtin.cpp ../luban/src/common.cpp 
 ../luban/src/feature.cpp ../luban/src/MurmurHash3.cc 
 ../luban/src/operator.cpp ../luban/src/placement.cpp 

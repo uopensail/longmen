@@ -1,7 +1,8 @@
 CURDIR:=$(shell pwd)
 
-OS:=$(shell uname | tr '[A-Z]' '[a-z]')
-ARCH:=$(shell uname | tr '[A-Z]' '[a-z]')
+PWD = $(shell pwd)
+OS = $(shell go env GOOS)
+ARCH = $(shell go env GOARCH)
 .PHONY: build clean run
 
 GITCOMMITHASH := $(shell git rev-parse --short HEAD)
@@ -10,7 +11,7 @@ GOLDFLAGS += -X handler.__GITCOMMITINFO__=$(GITCOMMITHASH).${GITBRANCHNAME}
 GOFLAGS = -ldflags "$(GOLDFLAGS)"
 .PHONY: build clean run
 
-PUBLISHDIR=${CURDIR}/dist
+PUBLISH_DIR=${CURDIR}/dist
 PROJECT_NAME=longmen
 
 all: build-prod

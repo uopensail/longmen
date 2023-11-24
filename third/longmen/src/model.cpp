@@ -66,6 +66,7 @@ TorchModel::TorchModel(std::string_view path) {
   try {
     c10::InferenceMode guard;
     this->module_ = torch::jit::load(std::string(path));
+    this->module_.eval();
   } catch (const c10::Error &e) {
     std::cerr << "loading model from: " << path << " error\n";
     exit(-1);
