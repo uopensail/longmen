@@ -1,5 +1,25 @@
 #include "model.h"
 
+typedef unsigned char BitMap;
+
+BitMap* new_bitmap(int size) {
+    int c_size = (size >> 3) + 1;
+    return (BitMap *)calloc(c_size, sizeof(BitMap));
+}
+void free_bitmap(BitMap *data) {
+    free(data);
+}
+void set_bitmap(BitMap *bitMap, int index) {
+    int byteIndex = index >> 3;
+    int offset = index & 7;
+    bitMap[byteIndex] |= (1 << offset);
+}
+int check_bitmap(BitMap *bitMap, int index) {
+    int byteIndex = index >> 3;
+    int offset = index & 7;
+    return (bitMap[byteIndex] & (1 << offset)) != 0;
+}
+
 Tensor::Tensor(int64_t rows, int64_t cols, int64_t stride, torch::Dtype type)
     : m_rows(rows), m_cols(cols), m_stride(stride), m_type(type) {
   m_data = (char *)calloc(m_rows * m_cols, m_stride);
@@ -106,11 +126,11 @@ Model::Model(std::string_view pool, std::string_view key,
     if (key == nullptr) {
       continue;
     }
-    std::string *value = std::get_if<std::string>(key.get());
-    if (value == nullptr) {
-      continue;
+    if (std::string *value = std::get_if<std::string>(key.get()); value != nullptr) {
+      m_pool[*value] = m_toolkit->process_item(features);
+    } else if (int64_t *value = std::get_if<int64_t>(key.get()); value != nullptr) {
+      m_pool[std::to_string(*value)] = m_toolkit->process_item(features);
     }
-    m_pool[*value] = m_toolkit->process_item(features);
   }
   reader.close();
 }
@@ -136,7 +156,7 @@ void Model::forward(char *user_features, size_t len, char **items,
   }
 
   char *data = nullptr;
-
+  BitMap* not_found_bitmap = new_bitmap(size);
   for (size_t i = 0; i < size; i++) {
     // copy user processed features
     for (auto &group : m_toolkit->m_user_placer->m_groups) {
@@ -147,6 +167,7 @@ void Model::forward(char *user_features, size_t len, char **items,
     // get item processed features
     auto iter = m_pool.find(std::string{items[i], size_t(lens[i])});
     if (iter == m_pool.end()) {
+      set_bitmap(not_found_bitmap, i);
       continue;
     }
 
@@ -155,6 +176,13 @@ void Model::forward(char *user_features, size_t len, char **items,
       input[group.id]->set_row(i, data);
     }
   }
-
+  
   m_model->forward(input, scores);
+
+  for (int i=0; i< size; i++) {
+    if (check_bitmap(not_found_bitmap,i)) {
+        scores[i] = -1.0;
+    }
+  }
+  free_bitmap(not_found_bitmap);
 }

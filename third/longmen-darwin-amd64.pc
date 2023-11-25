@@ -10,6 +10,7 @@ Cflags: \
 Libs: \
     ${PCDIR}/lib/darwin/amd64/liblongmen.a \
 	-L/usr/local/lib \
+	-L/usr/local/lib/libtorch/lib \
 	-lstdc++ \
 	-lm \
 	-lc10 \

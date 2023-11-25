@@ -8,6 +8,7 @@ include_directories(/usr/local/include)
 include_directories(/usr/include)
 include_directories(include)
 link_directories(/usr/local/lib)
+link_directories(/usr/local/lib/libtorch/lib)
 
 # Set the path to the PyTorch installation directory
 set(Torch_DIR /usr/local/lib/libtorch/share/cmake/Torch)
