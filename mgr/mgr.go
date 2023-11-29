@@ -1,6 +1,8 @@
 package mgr
 
 import (
+	"os"
+	"path/filepath"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -9,6 +11,7 @@ import (
 
 	_ "github.com/spf13/viper/remote"
 	"github.com/uopensail/longmen/wrapper"
+	"github.com/uopensail/ulib/finder"
 	"github.com/uopensail/ulib/prome"
 	"github.com/uopensail/ulib/utils"
 	"github.com/uopensail/ulib/zlog"
@@ -46,7 +49,14 @@ func (mgr *Manager) cronJob(envCfg config.EnvConfig, jobUtil *utils.MetuxJobUtil
 
 }
 func (mgr *Manager) downloadFile(envCfg config.EnvConfig, src, dst string) error {
-
+	dw := finder.GetFinder(&envCfg.Finder)
+	_, err := dw.Download(src, dst)
+	return err
+}
+func getPath(workDir, dir, src string) string {
+	poolDir := filepath.Join(workDir, dir)
+	os.MkdirAll(poolDir, os.ModePerm)
+	return filepath.Join(poolDir, filepath.Base(src))
 }
 
 // Do not modify the execution order
@@ -68,20 +78,23 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) func() {
 		return nil
 	}
 	job := func() {
-		err := mgr.downloadFile(envCfg, pconf.Path, "")
+		poolPath := getPath(envCfg.WorkDir, "pool", pconf.Path)
+		err := mgr.downloadFile(envCfg, pconf.Path, poolPath)
 		if err != nil {
 			return
 		}
-		err = mgr.downloadFile(envCfg, mconf.Path, "")
+		modelPath := getPath(envCfg.WorkDir, "model", mconf.Path)
+		err = mgr.downloadFile(envCfg, mconf.Path, modelPath)
 		if err != nil {
 			return
 		}
-		err = mgr.downloadFile(envCfg, mconf.Kit, "")
+		lubanPath := getPath(envCfg.WorkDir, "model", mconf.Kit)
+		err = mgr.downloadFile(envCfg, mconf.Kit, lubanPath)
 		if err != nil {
 			return
 		}
 		old := mgr.getInfer()
-		ins := wrapper.NewWrapper(pconf.Path, pconf.Key, mconf.Kit, mconf.Path)
+		ins := wrapper.NewWrapper(poolPath, pconf.Key, lubanPath, modelPath)
 		if ins != nil {
 			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.ins)), unsafe.Pointer(ins))
 			mgr.curCfg = *pmconf

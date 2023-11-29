@@ -11,3 +11,4 @@ cmake-build-debug/
 *.dylib
 build_cpp/
 lib/
+dist/
