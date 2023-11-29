@@ -1,0 +1,13 @@
+model = "test_model"
+pool = "test_pool"
+
+[server]
+project_name = "longmen"
+grpc_port = 9527
+http_port = 9528
+prome_port = 9529
+pprof_port = 9530
+debug = true
+[server.register.etcd]
+name = "test"
+endpoints = ["http://127.0.0.1:2379"]
