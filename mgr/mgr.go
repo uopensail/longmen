@@ -45,6 +45,9 @@ func (mgr *Manager) cronJob(envCfg config.EnvConfig, jobUtil *utils.MetuxJobUtil
 	}()
 
 }
+func (mgr *Manager) downloadFile(envCfg config.EnvConfig, src, dst string) error {
+
+}
 
 // Do not modify the execution order
 func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) func() {
@@ -65,14 +68,23 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) func() {
 		return nil
 	}
 	job := func() {
+		err := mgr.downloadFile(envCfg, pconf.Path, "")
+		if err != nil {
+			return
+		}
+		err = mgr.downloadFile(envCfg, mconf.Path, "")
+		if err != nil {
+			return
+		}
+		err = mgr.downloadFile(envCfg, mconf.Kit, "")
+		if err != nil {
+			return
+		}
 		old := mgr.getInfer()
 		ins := wrapper.NewWrapper(pconf.Path, pconf.Key, mconf.Kit, mconf.Path)
 		if ins != nil {
 			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.ins)), unsafe.Pointer(ins))
-			mgr.curCfg = config.PoolModelConfig{
-				PoolConfig:  *pconf,
-				ModelConfig: *mconf,
-			}
+			mgr.curCfg = *pmconf
 			old.Close()
 		}
 
