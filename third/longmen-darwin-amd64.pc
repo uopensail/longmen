@@ -8,7 +8,7 @@ Cflags: \
 	-I${PCDIR}/longmen/include
 
 Libs: \
-    ${PCDIR}/lib/darwin/amd64/liblongmen.a \
+    ${PCDIR}/lib/darwin/amd64/liblongmen_static.a \
 	-L/usr/local/lib \
 	-L/usr/local/lib/libtorch/lib \
 	-lstdc++ \

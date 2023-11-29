@@ -37,18 +37,26 @@ type PoolModelConfig struct {
 	ModelConfig `json:"model" toml:"model" yaml:"model"`
 	PoolConfig  `json:"pool" toml:"pool" yaml:"pool"`
 }
+type RemoteConfig struct {
+	Pool  string `json:"pool" toml:"pool" yaml:"pool"`
+	Model string `json:"model" toml:"model" yaml:"model"`
+}
+type LocalConfig struct {
+	PoolModelFile string `json:"config_file" toml:"config_file" yaml:"config_file"`
+}
 
 type AppConfig struct {
 	commonconfig.ServerConfig `json:"server" toml:"server" yaml:"server"`
 	EnvConfig                 `json:"env" toml:"env" yaml:"env"`
-	Pool                      string `json:"pool" toml:"pool" yaml:"pool"`
-	Model                     string `json:"model" toml:"model" yaml:"model"`
+	Mode                      string `json:"mode" toml:"mode" yaml:"mode"`
+
+	RemoteConfig `json:"remote" toml:"remote" yaml:"remote"`
+	LocalConfig  `json:"local" toml:"local" yaml:"local"`
 }
 
-func (conf *AppConfig) GetPoolConfig() (*PoolConfig, error) {
-	stat := prome.NewStat("AppConfig.GetPoolConfig")
+func (conf *AppConfig) GetRemoteConfig() (*PoolModelConfig, error) {
+	stat := prome.NewStat("AppConfig.GetRemoteConfig")
 	defer stat.End()
-
 	runtimeViper := viper.New()
 	runtimeViper.AddRemoteProvider("etcd3",
 		strings.Join(conf.EtcdConfig.Endpoints, ","),
@@ -68,19 +76,13 @@ func (conf *AppConfig) GetPoolConfig() (*PoolConfig, error) {
 		zlog.LOG.Error("viper unmarshal PoolConfigure config error", zap.Error(err))
 		return nil, err
 	}
-	return poolConf, nil
-}
 
-func (conf *AppConfig) GetModelConfig() (*ModelConfig, error) {
-	stat := prome.NewStat("AppConfig.GetModelConfig")
-	defer stat.End()
-
-	runtimeViper := viper.New()
-	runtimeViper.AddRemoteProvider("etcd3",
+	runtimeViper2 := viper.New()
+	runtimeViper2.AddRemoteProvider("etcd3",
 		strings.Join(conf.EtcdConfig.Endpoints, ","),
 		fmt.Sprintf(MODEL_KEY_FORMAT, conf.Model))
-	runtimeViper.SetConfigType("json")
-	err := runtimeViper.ReadRemoteConfig()
+	runtimeViper2.SetConfigType("json")
+	err = runtimeViper2.ReadRemoteConfig()
 	if err != nil {
 		stat.MarkErr()
 		zlog.LOG.Error("viper read remote config error", zap.Error(err))
@@ -91,10 +93,49 @@ func (conf *AppConfig) GetModelConfig() (*ModelConfig, error) {
 
 	if err != nil {
 		stat.MarkErr()
-		zlog.LOG.Error("viper unmarshal ModelConfigure config error", zap.Error(err))
+		zlog.LOG.Error("viper unmarshal Model config error", zap.Error(err))
 		return nil, err
 	}
-	return modelConf, nil
+
+	return &PoolModelConfig{
+		PoolConfig:  *poolConf,
+		ModelConfig: *modelConf,
+	}, err
+}
+
+func (conf *AppConfig) GetLocalConfig() (*PoolModelConfig, error) {
+	stat := prome.NewStat("AppConfig.GetLocalConfig")
+	defer stat.End()
+	runtimeViper := viper.New()
+	fd, err := os.Open(conf.LocalConfig.PoolModelFile)
+	if err != nil {
+		stat.MarkErr()
+		zlog.LOG.Error("open  config error", zap.Error(err))
+		return nil, err
+	}
+
+	defer fd.Close()
+	runtimeViper.ReadConfig(fd)
+	poolModelConf := &PoolModelConfig{}
+	err = runtimeViper.Unmarshal(poolModelConf)
+	if err != nil {
+		stat.MarkErr()
+		zlog.LOG.Error("viper read remote config error", zap.Error(err))
+		return nil, err
+	}
+
+	return poolModelConf, err
+}
+
+func (conf *AppConfig) GetPoolModelConfig() (*PoolModelConfig, error) {
+	stat := prome.NewStat("AppConfig.GetModelConfig")
+	defer stat.End()
+	if conf.Mode == "local" {
+		return conf.GetLocalConfig()
+	} else {
+		return conf.GetRemoteConfig()
+	}
+
 }
 
 var AppConfigInstance AppConfig

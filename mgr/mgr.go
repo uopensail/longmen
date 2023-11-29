@@ -48,17 +48,15 @@ func (mgr *Manager) cronJob(envCfg config.EnvConfig, jobUtil *utils.MetuxJobUtil
 
 // Do not modify the execution order
 func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) func() {
-	mconf, err := config.AppConfigInstance.GetModelConfig()
+	pmconf, err := config.AppConfigInstance.GetPoolModelConfig()
 	if err != nil {
 		zlog.LOG.Error("Manager.GetModelConfig", zap.Error(err))
 		return nil
 	}
-	pconf, err := config.AppConfigInstance.GetPoolConfig()
-	if err != nil {
-		zlog.LOG.Error("Manager.GetPoolConfig", zap.Error(err))
-		return nil
-	}
+
 	update := false
+	mconf := pmconf.ModelConfig
+	pconf := pmconf.PoolConfig
 	if mgr.curCfg.ModelConfig.Version != mconf.Version || mgr.curCfg.PoolConfig.Version != pconf.Version {
 		update = true
 	}
