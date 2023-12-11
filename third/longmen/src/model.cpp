@@ -20,6 +20,17 @@ int check_bitmap(BitMap *bitMap, int index) {
     return (bitMap[byteIndex] & (1 << offset)) != 0;
 }
 
+std::vector<std::string> split(const std::string& str, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(str);
+
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+
+    return tokens;
+}
 Tensor::Tensor(int64_t rows, int64_t cols, int64_t stride, torch::Dtype type)
     : m_rows(rows), m_cols(cols), m_stride(stride), m_type(type) {
   m_data = (char *)calloc(m_rows * m_cols, m_stride);
@@ -121,16 +132,14 @@ Model::Model(std::string_view pool, std::string_view key,
   std::string line;
   std::string m_key(key);
   while (std::getline(reader, line)) {
-    luban::SharedFeaturesPtr features = std::make_shared<luban::Features>(line);
-    auto key = features->operator[](m_key);
-    if (key == nullptr) {
+    auto ss = split(line,'\t');
+    if (ss.size() != 2) {
       continue;
     }
-    if (std::string *value = std::get_if<std::string>(key.get()); value != nullptr) {
-      m_pool[*value] = m_toolkit->process_item(features);
-    } else if (int64_t *value = std::get_if<int64_t>(key.get()); value != nullptr) {
-      m_pool[std::to_string(*value)] = m_toolkit->process_item(features);
-    }
+    auto item_id = ss[0];
+    luban::SharedFeaturesPtr features = std::make_shared<luban::Features>(ss[1]);
+    m_pool[item_id] = m_toolkit->process_item(features);
+
   }
   reader.close();
 }
