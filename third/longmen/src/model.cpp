@@ -1,4 +1,5 @@
 #include "model.h"
+#include "sample.h"
 
 typedef unsigned char BitMap;
 
@@ -120,7 +121,7 @@ void TorchModel::forward(Input &input, float *result) {
   memcpy(result, accessor.data(), sizeof(float) * output.numel());
 }
 
-Model::Model(std::string_view pool, std::string_view key,
+Model::Model(std::string_view pool, std::string_view lua_plugin,
              std::string_view toolkit, std::string_view model)
     : m_toolkit(std::make_shared<luban::Toolkit>(std::string(toolkit))),
       m_model(std::make_shared<TorchModel>(model)) {
@@ -130,7 +131,7 @@ Model::Model(std::string_view pool, std::string_view key,
     exit(-1);
   }
   std::string line;
-  std::string m_key(key);
+  auto sample_toolkit = std::make_shared<sample_luban::SampleToolkit>(std::string(lua_plugin));
   while (std::getline(reader, line)) {
     auto ss = split(line,'\t');
     if (ss.size() != 2) {
@@ -138,7 +139,14 @@ Model::Model(std::string_view pool, std::string_view key,
     }
     auto item_id = ss[0];
     luban::SharedFeaturesPtr features = std::make_shared<luban::Features>(ss[1]);
-    m_pool[item_id] = m_toolkit->process_item(features);
+    if (features == nullptr) {
+        continue;
+    }
+    luban::SharedFeaturesPtr padding_features = sample_toolkit->process_item_featrue(features);
+    if (padding_features == nullptr) {
+        continue;
+    }
+    m_pool[item_id] = m_toolkit->process_item(padding_features);
 
   }
   reader.close();

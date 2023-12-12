@@ -1,7 +1,5 @@
 CURDIR:=$(shell pwd)
-
 PWD = $(shell pwd)
-CURDIR:=$(shell pwd)
 OS = $(shell go env GOOS)
 ARCH = $(shell go env GOARCH)
 .PHONY: build clean run
@@ -17,21 +15,23 @@ PROJECT_NAME=sunmao
 
 all: build-prod
 third-dev:
+	git submodule update --init --recursive 
 	cmake --version
 	mkdir -pv build_cpp
-	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Debug && make
+	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Debug -DPYBIND=OFF && make
 	mkdir -pv build/
-	cp build_cpp/lib* build/
+	cp build_cpp/**/lib* build/
 	mkdir -pv third/lib/$(OS)/$(ARCH)/
-	cp build_cpp/lib* third/lib/$(OS)/$(ARCH)/
+	cp build_cpp/**/lib* third/lib/$(OS)/$(ARCH)/
 third-prod:
+	git submodule update --init --recursive 
 	cmake --version
 	mkdir -pv build_cpp
-	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Release && make
+	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Release -DPYBIND=OFF && make
 	mkdir -pv build/
-	cp build_cpp/lib* build/
+	cp build_cpp/**/lib* build/
 	mkdir -pv third/lib/$(OS)/$(ARCH)/
-	cp build_cpp/lib* third/lib/$(OS)/$(ARCH)/
+	cp build_cpp/**/lib* third/lib/$(OS)/$(ARCH)/
 
 build: third-prod
 	mkdir -pv $(PUBLISHDIR)/lib

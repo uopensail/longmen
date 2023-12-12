@@ -72,7 +72,7 @@ public:
   Model() = delete;
   Model(const Model &) = delete;
   Model(const Model &&) = delete;
-  Model(std::string_view pool, std::string_view key, std::string_view toolkit,
+  Model(std::string_view pool, std::string_view lua_plugin, std::string_view toolkit,
         std::string_view model);
   ~Model() = default;
   void forward(char *user_features, size_t len, char **items, int64_t *lens,

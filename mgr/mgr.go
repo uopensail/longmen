@@ -93,8 +93,14 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) func() {
 		if err != nil {
 			return
 		}
+
+		luaPath := getPath(envCfg.WorkDir, "model", mconf.Lua)
+		err = mgr.downloadFile(envCfg, mconf.Lua, luaPath)
+		if err != nil {
+			return
+		}
 		old := mgr.getInfer()
-		ins := wrapper.NewWrapper(poolPath, pconf.Key, lubanPath, modelPath)
+		ins := wrapper.NewWrapper(poolPath, luaPath, lubanPath, modelPath)
 		if ins != nil {
 			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.ins)), unsafe.Pointer(ins))
 			mgr.curCfg = *pmconf

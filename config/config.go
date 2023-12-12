@@ -23,13 +23,13 @@ const MODEL_KEY_FORMAT = "/longmen/models/%s"
 
 type PoolConfig struct {
 	Path    string `json:"path" toml:"path" yaml:"path"`
-	Key     string `json:"key" toml:"key" yaml:"key"`
 	Version string `json:"version" toml:"version" yaml:"version"`
 }
 
 type ModelConfig struct {
 	Path    string `json:"path" toml:"path" yaml:"path"`
 	Kit     string `json:"kit" toml:"kit" yaml:"kit"`
+	Lua     string `json:"lua" toml:"lua" yaml:"lua"`
 	Version string `json:"version" toml:"version" yaml:"version"`
 }
 
