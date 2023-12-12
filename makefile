@@ -10,7 +10,7 @@ GOLDFLAGS += -X handler.__GITCOMMITINFO__=$(GITCOMMITHASH).${GITBRANCHNAME}
 GOFLAGS = -ldflags "$(GOLDFLAGS)"
 
 PUBLISHDIR=${CURDIR}/dist
-PROJECT_NAME=sunmao
+PROJECT_NAME=longmen
 
 
 all: build-prod
