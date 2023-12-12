@@ -8,6 +8,7 @@ import (
 	"unsafe"
 
 	"github.com/uopensail/longmen/config"
+	"github.com/uopensail/longmen/preprocess"
 
 	_ "github.com/spf13/viper/remote"
 	"github.com/uopensail/longmen/wrapper"
@@ -19,8 +20,11 @@ import (
 )
 
 type Manager struct {
-	ins    *wrapper.Wrapper
-	curCfg config.PoolModelConfig
+	ins             *wrapper.Wrapper
+	preprocesser    *preprocess.PreProcesser
+	curShortPoolCfg config.PoolConfig
+	curLongPooCfg   config.PoolConfig
+	curModelCfg     config.ModelConfig
 }
 
 func (mgr *Manager) getInfer() *wrapper.Wrapper {
@@ -61,54 +65,92 @@ func getPath(workDir, dir, src string) string {
 
 // Do not modify the execution order
 func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) func() {
-	pmconf, err := config.AppConfigInstance.GetPoolModelConfig()
+	shortPoolCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolShortFilePath)
 	if err != nil {
-		zlog.LOG.Error("Manager.GetModelConfig", zap.Error(err))
 		return nil
 	}
 
-	update := false
-	mconf := pmconf.ModelConfig
-	pconf := pmconf.PoolConfig
-	if mgr.curCfg.ModelConfig.Version != mconf.Version || mgr.curCfg.PoolConfig.Version != pconf.Version {
-		update = true
-	}
-
-	if !update {
+	modelCfg, err := config.AppConfigInstance.GetModelConfig()
+	if err != nil {
 		return nil
 	}
-	job := func() {
-		poolPath := getPath(envCfg.WorkDir, "pool", pconf.Path)
-		err := mgr.downloadFile(envCfg, pconf.Path, poolPath)
-		if err != nil {
-			return
-		}
-		modelPath := getPath(envCfg.WorkDir, "model", mconf.Path)
-		err = mgr.downloadFile(envCfg, mconf.Path, modelPath)
-		if err != nil {
-			return
-		}
-		lubanPath := getPath(envCfg.WorkDir, "model", mconf.Kit)
-		err = mgr.downloadFile(envCfg, mconf.Kit, lubanPath)
-		if err != nil {
-			return
-		}
+	jobs := make([]func(), 0, 2)
 
-		luaPath := getPath(envCfg.WorkDir, "model", mconf.Lua)
-		err = mgr.downloadFile(envCfg, mconf.Lua, luaPath)
-		if err != nil {
-			return
+	if mgr.ins == nil || mgr.curModelCfg.Version != modelCfg.Version || mgr.curShortPoolCfg.Version != shortPoolCfg.Version {
+		job := func() {
+			poolPath := getPath(envCfg.WorkDir, "pool", shortPoolCfg.Path)
+			err := mgr.downloadFile(envCfg, shortPoolCfg.Path, poolPath)
+			if err != nil {
+				return
+			}
+			modelPath := getPath(envCfg.WorkDir, "model", modelCfg.Path)
+			err = mgr.downloadFile(envCfg, modelCfg.Path, modelPath)
+			if err != nil {
+				return
+			}
+			lubanPath := getPath(envCfg.WorkDir, "model", modelCfg.Kit)
+			err = mgr.downloadFile(envCfg, modelCfg.Kit, lubanPath)
+			if err != nil {
+				return
+			}
+
+			luaPath := getPath(envCfg.WorkDir, "model", modelCfg.Lua)
+			err = mgr.downloadFile(envCfg, modelCfg.Lua, luaPath)
+			if err != nil {
+				return
+			}
+			old := mgr.getInfer()
+			ins := wrapper.NewWrapper(poolPath, luaPath, lubanPath, modelPath)
+			if ins != nil {
+				atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.ins)), unsafe.Pointer(ins))
+				mgr.curShortPoolCfg = *shortPoolCfg
+				mgr.curModelCfg = *modelCfg
+			}
+			if old != nil {
+				old.Close()
+			}
+
 		}
-		old := mgr.getInfer()
-		ins := wrapper.NewWrapper(poolPath, luaPath, lubanPath, modelPath)
-		if ins != nil {
-			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.ins)), unsafe.Pointer(ins))
-			mgr.curCfg = *pmconf
-			old.Close()
+		jobs = append(jobs, job)
+	}
+
+	if mgr.preprocesser == nil {
+		longPoolCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolLongFilePath)
+		if err != nil {
+			return nil
+		}
+		jobs = append(jobs, func() {
+			mgr.preprocesser = preprocess.NewPreProcesser(envCfg, []config.PoolConfig{
+				*shortPoolCfg, *longPoolCfg,
+			}, *modelCfg)
+			mgr.curLongPooCfg = *longPoolCfg
+		})
+	} else {
+		longPoolCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolLongFilePath)
+		if err != nil {
+			zlog.LOG.Error("config.GetPoolConfig", zap.String("PoolLongFilePath", config.AppConfigInstance.PoolLongFilePath), zap.Error(err))
+		} else {
+			jobs = append(jobs, func() {
+				job := mgr.preprocesser.GetUpdateJob(envCfg, []config.PoolConfig{
+					*shortPoolCfg, *longPoolCfg,
+				}, *modelCfg)
+				if job != nil {
+					job()
+					mgr.curLongPooCfg = *longPoolCfg
+				}
+			})
+
 		}
 
 	}
-	return job
+	if len(jobs) > 0 {
+		return func() {
+			for i := 0; i < len(jobs); i++ {
+				jobs[i]()
+			}
+		}
+	}
+	return nil
 }
 
 func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, error) {

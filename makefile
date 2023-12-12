@@ -42,29 +42,24 @@ build-dev: third-dev
 	mkdir -pv $(PUBLISHDIR)/lib
 	mkdir -pv ${PUBLISHDIR}/conf
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-	go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
+	export GOTRACEBACK=crash  && go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 
 
 prod: build
 	mkdir -pv $(PUBLISHDIR)/lib
-	
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-	go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
 pre: build
 	mkdir -pv $(PUBLISHDIR)/lib
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-	go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
 local: build-dev
 	mkdir -pv $(PUBLISHDIR)/lib
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-	go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
 dev: third-dev
 	mkdir -pv $(PUBLISHDIR)/lib
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-	export GOTRACEBACK=crash  && go build -gcflags=all="-N -l" -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
 clean:
 	rm -rf ./build

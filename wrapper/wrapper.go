@@ -26,9 +26,9 @@ type Wrapper struct {
 	Ptr unsafe.Pointer
 }
 
-func NewWrapper(poolPath, keyField, lubanCfgPath, modelPath string) *Wrapper {
+func NewWrapper(poolPath, luaPlugin, lubanCfgPath, modelPath string) *Wrapper {
 	model := C.longmen_new_model((*C.char)(unsafe.Pointer(&s2b(poolPath)[0])), C.int(len(poolPath)),
-		(*C.char)(unsafe.Pointer(&s2b(keyField)[0])), C.int(len(keyField)),
+		(*C.char)(unsafe.Pointer(&s2b(luaPlugin)[0])), C.int(len(luaPlugin)),
 		(*C.char)(unsafe.Pointer(&s2b(lubanCfgPath)[0])), C.int(len(lubanCfgPath)),
 		(*C.char)(unsafe.Pointer(&s2b(modelPath)[0])), C.int(len(modelPath)))
 	w := &Wrapper{
