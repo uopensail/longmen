@@ -1,11 +1,11 @@
 package wrapper
 
 /*
-#cgo CFLAGS: -I${PCDIR}/longmen/include
+#cgo CFLAGS: -I${SRCDIR}/../third/longmen/include
 
 #cgo darwin,amd64 LDFLAGS: ${SRCDIR}/../third/lib/darwin/amd64/libluban_static.a ${SRCDIR}/../third/lib/darwin/amd64/libsample_luban_static.a ${SRCDIR}/../third/lib/darwin/amd64/liblongmen_static.a /usr/local/lib/liblua.a -L/usr/local/lib -L/usr/local/lib/libtorch/lib -lstdc++ -lm -lc10 -ltorch_cpu -lpthread
-#cgo darwin,amd64 LDFLAGS: ${SRCDIR}/../third/lib/darwin/arm64/libluban_static.a ${SRCDIR}/../third/lib/darwin/arm64/libsample_luban_static.a ${SRCDIR}/../third/lib/darwin/arm64/liblongmen_static.a /usr/local/lib/liblua.a -L/usr/local/lib -L/usr/local/lib/libtorch/lib -lstdc++ -lm -lc10 -ltorch_cpu -lpthread
-#cgo darwin,amd64 LDFLAGS: ${SRCDIR}/../third/lib/linux/amd64/libluban_static.a ${SRCDIR}/../third/lib/linux/amd64/libsample_luban_static.a ${SRCDIR}/../third/lib/linux/amd64/liblongmen_static.a /usr/local/lib/liblua.a -L/usr/local/lib -L/usr/local/lib/libtorch/lib -lstdc++ -lm -lc10 -ltorch_cpu -lpthread
+#cgo darwin,arm64 LDFLAGS: ${SRCDIR}/../third/lib/darwin/arm64/libluban_static.a ${SRCDIR}/../third/lib/darwin/arm64/libsample_luban_static.a ${SRCDIR}/../third/lib/darwin/arm64/liblongmen_static.a /usr/local/lib/liblua.a -L/usr/local/lib -L/usr/local/lib/libtorch/lib -lstdc++ -lm -lc10 -ltorch_cpu -lpthread
+#cgo linux,amd64 LDFLAGS: ${SRCDIR}/../third/lib/linux/amd64/libluban_static.a ${SRCDIR}/../third/lib/linux/amd64/libsample_luban_static.a ${SRCDIR}/../third/lib/linux/amd64/liblongmen_static.a /usr/local/lib/liblua.a -L/usr/local/lib -L/usr/local/lib/libtorch/lib -lstdc++ -lm -lc10 -ltorch_cpu -lpthread
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

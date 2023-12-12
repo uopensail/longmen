@@ -20,18 +20,18 @@ third-dev:
 	mkdir -pv build_cpp
 	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Debug -DPYBIND=OFF && make
 	mkdir -pv build/
-	cp build_cpp/**/lib* build/
 	mkdir -pv third/lib/$(OS)/$(ARCH)/
-	cp build_cpp/**/lib* third/lib/$(OS)/$(ARCH)/
+	find build_cpp -type f -name 'lib*' -exec cp {}  build \;
+	find build_cpp -type f -name 'lib*' -exec cp {}  third/lib/$(OS)/$(ARCH)/ \;
 third-prod:
 	git submodule update --init --recursive 
 	cmake --version
 	mkdir -pv build_cpp
 	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Release -DPYBIND=OFF && make
 	mkdir -pv build/
-	cp build_cpp/**/lib* build/
 	mkdir -pv third/lib/$(OS)/$(ARCH)/
-	cp build_cpp/**/lib* third/lib/$(OS)/$(ARCH)/
+	find build_cpp -type f -name 'lib*' -exec cp {}  build \;
+	find build_cpp -type f -name 'lib*' -exec cp {}  third/lib/$(OS)/$(ARCH)/ \;
 
 build: third-prod
 	mkdir -pv $(PUBLISHDIR)/lib
