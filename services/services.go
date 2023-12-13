@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/uopensail/longmen/api"
+	longmenapi "github.com/uopensail/longmen/api"
 	"github.com/uopensail/longmen/mgr"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +20,7 @@ import (
 )
 
 type Services struct {
-	api.UnimplementedRankServer
+	longmenapi.UnimplementedRankServer
 	etcdCli *etcdclient.Client
 
 	instance registry.ServiceInstance
@@ -38,7 +38,7 @@ func (srv *Services) Init(configFolder string, etcdName string, etcdCli *etcdcli
 
 }
 func (srv *Services) RegisterGrpc(grpcS *grpc.Server) {
-	api.RegisterRankServer(grpcS, srv)
+	longmenapi.RegisterRankServer(grpcS, srv)
 
 }
 
@@ -54,7 +54,7 @@ func (srv *Services) RankHandler(c *gin.Context) {
 	stat := prome.NewStat("App.RankHandler")
 	defer stat.End()
 
-	request := &api.Request{}
+	request := &longmenapi.Request{}
 	if err := c.Bind(request); err != nil {
 		zlog.LOG.Error("request bind error: ", zap.Error(err))
 		return
@@ -69,7 +69,7 @@ func (srv *Services) RankHandler(c *gin.Context) {
 	return
 }
 
-func (srv *Services) Rank(ctx context.Context, request *api.Request) (*api.Response, error) {
+func (srv *Services) Rank(ctx context.Context, request *longmenapi.Request) (*longmenapi.Response, error) {
 	if len(request.Records) <= 0 {
 		return nil, errors.New("input empty")
 	}
@@ -78,7 +78,7 @@ func (srv *Services) Rank(ctx context.Context, request *api.Request) (*api.Respo
 		itemIds[i] = request.Records[i].Id
 	}
 	scores, err := mgr.MgrIns.Rank(request.UserFeatures, itemIds)
-	resp := &api.Response{
+	resp := &longmenapi.Response{
 		UserId:  request.UserId,
 		Records: request.Records,
 	}
