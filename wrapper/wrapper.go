@@ -48,11 +48,9 @@ func (w *Wrapper) Close() {
 	w.Reference.LazyFree(1)
 }
 
-func (w *Wrapper) Rank(userFeatureJson string, itemIds []string) []float32 {
+func (w *Wrapper) Rank(userFeatureJson []byte, itemIds []string) []float32 {
 	stat := prome.NewStat("Wrapper.Rank")
 	defer stat.End()
-	w.Retain()
-	defer w.Release()
 
 	items := make([]*C.char, len(itemIds))
 	lens := make([]int, len(itemIds))
@@ -62,8 +60,8 @@ func (w *Wrapper) Rank(userFeatureJson string, itemIds []string) []float32 {
 	}
 
 	scores := make([]float32, len(itemIds))
-	C.longmen_forward(w.Ptr, (*C.char)(unsafe.Pointer(&s2b(userFeatureJson)[0])),
-		C.int(len(userFeatureJson)), unsafe.Pointer(&items[0]), unsafe.Pointer(&lens[0]),
+	C.longmen_forward(w.Ptr, (*C.char)(unsafe.Pointer(&userFeatureJson[0])),
+		C.int(len(userFeatureJson)), (*C.char)(unsafe.Pointer(&items[0])), unsafe.Pointer(&lens[0]),
 		C.int(len(itemIds)), (*C.float)(unsafe.Pointer(&scores[0])))
 
 	stat.SetCounter(len(itemIds))

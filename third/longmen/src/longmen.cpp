@@ -16,7 +16,7 @@ void longmen_del_model(void *model) {
   delete (Model *)model;
 }
 
-void longmen_forward(void *model, char *user_features, int len, void *items,
+void longmen_forward(void *model, char *user_features, int len, char *items,
                      void *lens, int size, float *scores) {
   if (model == nullptr || user_features == nullptr || len == 0 ||
       items == nullptr || lens == nullptr || size == 0 || scores == nullptr) {

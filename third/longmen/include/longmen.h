@@ -24,7 +24,7 @@ extern "C" {
 void *longmen_new_model(char *path, int plen, char *key, int klen,
                         char *toolkit, int tlen, char *model, int mlen);
 void longmen_del_model(void *model);
-void longmen_forward(void *model, char *user_features, int len, void *items,
+void longmen_forward(void *model, char *user_features, int len, char *items,
                      void *lens, int size, float *scores);
 #ifdef __cplusplus
 } /* end extern "C"*/

@@ -1,12 +1,14 @@
 package mgr
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sync/atomic"
 	"time"
 	"unsafe"
 
+	"github.com/bytedance/sonic"
 	"github.com/uopensail/longmen/config"
 	"github.com/uopensail/longmen/preprocess"
 
@@ -130,15 +132,15 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) func() {
 		if err != nil {
 			zlog.LOG.Error("config.GetPoolConfig", zap.String("PoolLongFilePath", config.AppConfigInstance.PoolLongFilePath), zap.Error(err))
 		} else {
-			jobs = append(jobs, func() {
-				job := mgr.preprocesser.GetUpdateJob(envCfg, []config.PoolConfig{
-					*shortPoolCfg, *longPoolCfg,
-				}, *modelCfg)
-				if job != nil {
+			job := mgr.preprocesser.GetUpdateJob(envCfg, []config.PoolConfig{
+				*shortPoolCfg, *longPoolCfg,
+			}, *modelCfg)
+			if job != nil {
+				jobs = append(jobs, func() {
 					job()
 					mgr.curLongPooCfg = *longPoolCfg
-				}
-			})
+				})
+			}
 
 		}
 
@@ -157,7 +159,22 @@ func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, e
 	stat := prome.NewStat("Manager.Rank")
 	defer stat.End()
 	infer := mgr.getInfer()
-	return infer.Rank(userFeatureJson, itemIds), nil
+	infer.Retain()
+	defer infer.Release()
+	featData := []byte(userFeatureJson)
+	if mgr.preprocesser != nil {
+		mutFeat := mgr.preprocesser.ProcessUser(featData)
+		if mutFeat == nil {
+			return nil, errors.New("preprocess user error")
+		}
+		var err error
+		featData, err = sonic.Marshal(mutFeat)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return infer.Rank(featData, itemIds), nil
 }
 
 var MgrIns Manager
