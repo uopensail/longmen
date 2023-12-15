@@ -4,6 +4,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -173,8 +175,36 @@ func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, e
 			return nil, err
 		}
 	}
-
-	return infer.Rank(featData, itemIds), nil
+	parallelNum := runtime.NumCPU()
+	if parallelNum == 0 {
+		parallelNum = 2
+	}
+	itemLen := len(itemIds)
+	step := itemLen / parallelNum
+	if step == 0 {
+		step = 1
+	}
+	wg := sync.WaitGroup{}
+	i := 0
+	score := make([]float32, itemLen)
+	for ; i < itemLen; i += step {
+		wg.Add(1)
+		go func(begin, end int) {
+			defer wg.Done()
+			ret := infer.Rank(featData, itemIds[begin:end])
+			copy(score[begin:end], ret)
+		}(i, i+step)
+	}
+	if i < itemLen {
+		wg.Add(1)
+		go func(begin, end int) {
+			defer wg.Done()
+			ret := infer.Rank(featData, itemIds[begin:end])
+			copy(score[begin:end], ret)
+		}(i, itemLen)
+	}
+	wg.Wait()
+	return score, nil
 }
 
 var MgrIns Manager
