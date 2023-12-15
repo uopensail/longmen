@@ -1,5 +1,6 @@
 #include "model.h"
 #include "sample.h"
+#include <ATen/Version.h>
 
 typedef unsigned char BitMap;
 
@@ -95,6 +96,7 @@ void Input::print() {
 }
 
 TorchModel::TorchModel(std::string_view path) {
+  std::cout << torch::show_config() << std::endl;
   try {
     c10::InferenceMode guard;
     this->module_ = torch::jit::load(std::string(path));

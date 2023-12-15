@@ -11,14 +11,22 @@ GOFLAGS = -ldflags "$(GOLDFLAGS)"
 
 PUBLISHDIR=${CURDIR}/dist
 PROJECT_NAME=longmen
+CMAKE_DEFINE := -DPYBIND=OFF
+ifeq ($(strip $(TORCH_INSTALL_DIR)),)
+    TORCH_CMAKE_DIR :=$(shell python3 -c 'import torch;print(torch.utils.cmake_prefix_path)')
+else
+	TORCH_CMAKE_DIR :=$(TORCH_INSTALL_DIR)/share/cmake
+endif
 
+CMAKE_DEFINE += -DCMAKE_PREFIX_PATH=${TORCH_CMAKE_DIR}
+TORCH_LIB_DIR=$(TORCH_CMAKE_DIR)/../../lib
 
 all: build-prod
 third-dev:
 	git submodule update --init --recursive 
 	cmake --version
 	mkdir -pv build_cpp
-	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Debug -DPYBIND=OFF && make
+	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Debug ${CMAKE_DEFINE} && make
 	mkdir -pv build/
 	mkdir -pv third/lib/$(OS)/$(ARCH)/
 	find build_cpp -type f -name 'lib*' -exec cp {}  build \;
@@ -27,7 +35,7 @@ third-prod:
 	git submodule update --init --recursive 
 	cmake --version
 	mkdir -pv build_cpp
-	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Release -DPYBIND=OFF && make
+	cd build_cpp && cmake ../third/longmen/ -DCMAKE_BUILD_TYPE=Release ${CMAKE_DEFINE} && make
 	mkdir -pv build/
 	mkdir -pv third/lib/$(OS)/$(ARCH)/
 	find build_cpp -type f -name 'lib*' -exec cp {}  build \;
@@ -35,14 +43,15 @@ third-prod:
 
 build: third-prod
 	mkdir -pv $(PUBLISHDIR)/lib
-	mkdir -pv ${PUBLISHDIR}/conf
+	mkdir -pv $(PUBLISHDIR)/conf
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-	go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
+	export LD_LIBRARY_PATH=$(TORCH_LIB_DIR) && CGO_LDFLAGS="-L$(TORCH_LIB_DIR)" go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 build-dev: third-dev
 	mkdir -pv $(PUBLISHDIR)/lib
-	mkdir -pv ${PUBLISHDIR}/conf
+	mkdir -pv $(PUBLISHDIR)/conf
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-	export GOTRACEBACK=crash  && go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
+  
+	export GOTRACEBACK=crash && export LD_LIBRARY_PATH=$(TORCH_LIB_DIR) && CGO_LDFLAGS="-L$(TORCH_LIB_DIR)"  go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 
 
 prod: build
