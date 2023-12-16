@@ -10,8 +10,8 @@ package preprocess
 #include <stdio.h>
 #include "c_sample.h"
 */
-
 import "C"
+
 import (
 	"math/rand"
 	"runtime"
@@ -37,9 +37,9 @@ type toolkitWorker struct {
 	jobChannel chan toolkitJob
 }
 
-func newtoolkitWorker(luaFilePath string, chanSize int) *toolkitWorker {
+func newtoolkitWorker(luaFilePath, lubanFilePath string, chanSize int) *toolkitWorker {
 	w := &toolkitWorker{
-		toolkit:    NewSampleLubanToolKitWrapper(luaFilePath),
+		toolkit:    NewSampleLubanToolKitWrapper(luaFilePath, lubanFilePath),
 		jobChannel: make(chan toolkitJob, chanSize),
 	}
 	go w.doLoop()
@@ -75,14 +75,14 @@ type PreProcessToolKit struct {
 	workers []*toolkitWorker
 }
 
-func NewLuaToolKit(luaPath string) *PreProcessToolKit {
+func NewLuaToolKit(luaPath, lubanPath string) *PreProcessToolKit {
 
 	chanSize := 10000
 	num := runtime.NumCPU()
 	workers := make([]*toolkitWorker, num)
 
 	for i := 0; i < num; i++ {
-		workers[i] = newtoolkitWorker(luaPath, chanSize)
+		workers[i] = newtoolkitWorker(luaPath, lubanPath, chanSize)
 	}
 	tw := &PreProcessToolKit{
 		workers: workers,
@@ -153,7 +153,11 @@ func (toolkit *SampleLubanToolKitWrapper) ProcessUser(pool *PoolWrapper, userFea
 	if len(userFeatureJson) == 0 {
 		return nil
 	}
-	outC := C.sample_luban_process_user(toolkit.cPtr, pool.cPtr, (*C.char)(unsafe.Pointer(&userFeatureJson[0])), C.int(len(userFeatureJson)))
+	outC := C.sample_luban_new_user_rows(toolkit.cPtr, pool.cPtr, (*C.char)(unsafe.Pointer(&userFeatureJson[0])), C.int(len(userFeatureJson)))
 
 	return outC
+}
+
+func ReleaseLubanRows(rowsPtr unsafe.Pointer) {
+	C.sample_luban_delete_user_rows(rowsPtr)
 }

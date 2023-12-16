@@ -243,9 +243,9 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 
 	if localModelCfg == nil || localModelCfg.Version != modelCfg.Version {
 		jobs = append(jobs, func() error {
-			luaToolkit := preprocess.NewLuaToolKit(modelCfg.Lua)
-			old := (*preprocess.PreProcessToolKit)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&p.luaToolkit))))
-			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit)), unsafe.Pointer(&luaToolkit))
+			preprocessToolkit := preprocess.NewLuaToolKit(modelCfg.Lua, modelCfg.Kit)
+			old := (*preprocess.PreProcessToolKit)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit))))
+			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit)), unsafe.Pointer(&preprocessToolkit))
 			if old != nil {
 				old.Close()
 			}
@@ -267,18 +267,15 @@ func (mgr *Manager) preProcessUser(pool *preprocess.PoolWrapper, userFeatureJson
 func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, error) {
 	stat := prome.NewStat("Manager.Rank")
 	defer stat.End()
-	infer := mgr.getInfer()
-	infer.Retain()
-	defer infer.Release()
+
 	featData := []byte(userFeatureJson)
 	if mgr.preprocessToolkit == nil {
 		return nil, errors.New("preprocess empty")
 	}
-	rowsPtr := mgr.preProcessUser(pool, featData)
+	rowsPtr := mgr.preProcessUser(mgr.poolGetter, featData)
 
 	//TODO delete
-	//defer
-
+	defer preprocess.ReleaseLubanRows(rowsPtr)
 	parallelNum := runtime.NumCPU()
 	if parallelNum == 0 {
 		parallelNum = 2
@@ -288,6 +285,11 @@ func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, e
 	if step == 0 {
 		step = 1
 	}
+
+	infer := mgr.getInfer()
+	infer.Retain()
+	defer infer.Release()
+
 	wg := sync.WaitGroup{}
 	i := 0
 	score := make([]float32, itemLen)
@@ -295,15 +297,16 @@ func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, e
 		wg.Add(1)
 		go func(begin, end int) {
 			defer wg.Done()
-			ret := infer.Rank(featData, itemIds[begin:end])
+			ret := infer.Rank(rowsPtr, itemIds[begin:end])
 			copy(score[begin:end], ret)
 		}(i, i+step)
 	}
+
 	if i < itemLen {
 		wg.Add(1)
 		go func(begin, end int) {
 			defer wg.Done()
-			ret := infer.Rank(featData, itemIds[begin:end])
+			ret := infer.Rank(rowsPtr, itemIds[begin:end])
 			copy(score[begin:end], ret)
 		}(i, itemLen)
 	}
