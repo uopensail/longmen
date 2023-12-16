@@ -25,3 +25,14 @@ void longmen_forward(void *model, char *user_features, int len, char *items,
   Model *m = (Model *)model;
   m->forward(user_features, len, (char **)items, (int64_t *)lens, size, scores);
 }
+
+void longmen_forward_rows(void *model, void* rows_ptr, char *items,
+                     void *lens, int size, float *scores) {
+ if (model == nullptr || rows_ptr == nullptr  ||
+      items == nullptr || lens == nullptr || size == 0 || scores == nullptr) {
+    return;
+  }
+  Model *m = (Model *)model;
+  luban::Rows* rows = (luban::Rows*)rows_ptr;
+  m->forward(rows, (char **)items, (int64_t *)lens, size, scores);
+}

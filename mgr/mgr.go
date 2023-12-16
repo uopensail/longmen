@@ -10,7 +10,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/bytedance/sonic"
 	"github.com/uopensail/longmen/config"
 	"github.com/uopensail/longmen/preprocess"
 
@@ -23,16 +22,50 @@ import (
 	"go.uber.org/zap"
 )
 
+type FileResource struct {
+	shortPoolMetaFilePath string
+	longPoolMetaFilePath  string
+	modelMetaFilePath     string
+	config.ModelConfig
+}
+
+func (res *FileResource) GetLocalShortPoolMeta() *config.PoolConfig {
+	cfg := config.PoolConfig{}
+	err := cfg.Init(res.shortPoolMetaFilePath)
+	if err != nil {
+		return nil
+	}
+	return &cfg
+}
+
+func (res *FileResource) GetLocalLongPoolMeta() *config.PoolConfig {
+	cfg := config.PoolConfig{}
+	err := cfg.Init(res.longPoolMetaFilePath)
+	if err != nil {
+		return nil
+	}
+	return &cfg
+}
+
+func (res *FileResource) GetLocalModelMeta() *config.ModelConfig {
+	cfg := config.ModelConfig{}
+	err := cfg.Init(res.modelMetaFilePath)
+	if err != nil {
+		return nil
+	}
+	return &cfg
+}
+
 type Manager struct {
-	ins             *wrapper.Wrapper
-	preprocesser    *preprocess.PreProcesser
-	curShortPoolCfg config.PoolConfig
-	curLongPooCfg   config.PoolConfig
-	curModelCfg     config.ModelConfig
+	//
+	FileResource
+	modelIns          *wrapper.Wrapper
+	poolGetter        *preprocess.PoolWrapper
+	preprocessToolkit *preprocess.PreProcessToolKit
 }
 
 func (mgr *Manager) getInfer() *wrapper.Wrapper {
-	ret := (*wrapper.Wrapper)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.ins))))
+	ret := (*wrapper.Wrapper)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.modelIns))))
 	return ret
 }
 
@@ -42,15 +75,31 @@ func (mgr *Manager) Init(envCfg config.EnvConfig, jobUtil *utils.MetuxJobUtil) {
 }
 
 func (mgr *Manager) cronJob(envCfg config.EnvConfig, jobUtil *utils.MetuxJobUtil) {
-	job := mgr.loadAllJob(envCfg)
-	job()
+	jobs := mgr.loadAllJob(envCfg)
+	for i := 0; i < len(jobs); i++ {
+		job := jobs[i]
+		if job != nil {
+			err := job()
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 	go func() {
 
 		ticker := time.NewTicker(time.Minute * 5)
 		defer ticker.Stop()
 		for {
 			<-ticker.C
-			job := mgr.loadAllJob(envCfg)
+			jobs := mgr.loadAllJob(envCfg)
+			job := func() {
+				for i := 0; i < len(jobs); i++ {
+					job := jobs[i]
+					if job != nil {
+						job()
+					}
+				}
+			}
 			jobUtil.TryRun(job)
 		}
 	}()
@@ -68,7 +117,7 @@ func getPath(workDir, dir, src string) string {
 }
 
 // Do not modify the execution order
-func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) func() {
+func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 	shortPoolCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolShortFilePath)
 	if err != nil {
 		return nil
@@ -78,83 +127,141 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) func() {
 	if err != nil {
 		return nil
 	}
-	jobs := make([]func(), 0, 2)
+	longPoolCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolLongFilePath)
+	if err != nil {
+		return nil
+	}
+	localLongPoolCfg := mgr.FileResource.GetLocalLongPoolMeta()
+	localShortPoolCfg := mgr.FileResource.GetLocalShortPoolMeta()
+	localModelCfg := mgr.FileResource.GetLocalModelMeta()
 
-	if mgr.ins == nil || mgr.curModelCfg.Version != modelCfg.Version || mgr.curShortPoolCfg.Version != shortPoolCfg.Version {
-		job := func() {
-			poolPath := getPath(envCfg.WorkDir, "pool", shortPoolCfg.Path)
-			err := mgr.downloadFile(envCfg, shortPoolCfg.Path, poolPath)
+	jobs := make([]func() error, 0, 2)
+
+	if localShortPoolCfg == nil || localShortPoolCfg.Version != shortPoolCfg.Version {
+		jobs = append(jobs, func() error {
+			dwFilePath := getPath(envCfg.WorkDir, "pool", shortPoolCfg.Path)
+			err := mgr.downloadFile(envCfg, shortPoolCfg.Path, dwFilePath)
 			if err != nil {
-				return
+				zlog.LOG.Warn("download file   error", zap.String("source", shortPoolCfg.Path), zap.Error(err))
+				return err
 			}
-			modelPath := getPath(envCfg.WorkDir, "model", modelCfg.Path)
-			err = mgr.downloadFile(envCfg, modelCfg.Path, modelPath)
+			zlog.LOG.Info("download file success", zap.String("source", shortPoolCfg.Path), zap.String("dst", dwFilePath))
+			mgr.FileResource.shortPoolMetaFilePath = dwFilePath
+			return nil
+		})
+	}
+
+	if localModelCfg == nil || localModelCfg.Version != modelCfg.Version {
+		jobs = append(jobs, func() error {
+			//download model.pt
+			dwFilePath := getPath(envCfg.WorkDir, "model", modelCfg.Path)
+			err := mgr.downloadFile(envCfg, localModelCfg.Path, dwFilePath)
 			if err != nil {
-				return
+				zlog.LOG.Warn("download file   error", zap.String("source", localModelCfg.Path), zap.Error(err))
+				return err
 			}
+			zlog.LOG.Info("download file success", zap.String("source", localModelCfg.Path), zap.String("dst", dwFilePath))
+
+			//download luban.json
 			lubanPath := getPath(envCfg.WorkDir, "model", modelCfg.Kit)
 			err = mgr.downloadFile(envCfg, modelCfg.Kit, lubanPath)
 			if err != nil {
-				return
+				return err
 			}
-
+			zlog.LOG.Info("download file success", zap.String("source", modelCfg.Kit), zap.String("dst", lubanPath))
+			//download model.lua
 			luaPath := getPath(envCfg.WorkDir, "model", modelCfg.Lua)
 			err = mgr.downloadFile(envCfg, modelCfg.Lua, luaPath)
 			if err != nil {
-				return
+				return err
 			}
+			zlog.LOG.Info("download file success", zap.String("source", modelCfg.Lua), zap.String("dst", luaPath))
+			mgr.FileResource.ModelConfig = *modelCfg
+			mgr.FileResource.modelMetaFilePath = dwFilePath
+			return nil
+		})
+	}
+
+	if localLongPoolCfg == nil || localLongPoolCfg.Version != longPoolCfg.Version {
+		jobs = append(jobs, func() error {
+			//download pool.json
+			longPoolPath := getPath(envCfg.WorkDir, "pool", longPoolCfg.Path)
+			err := mgr.downloadFile(envCfg, longPoolCfg.Path, longPoolPath)
+			if err != nil {
+				zlog.LOG.Warn("download file   error", zap.String("source", longPoolCfg.Path), zap.Error(err))
+				return err
+			}
+			zlog.LOG.Info("download file success", zap.String("source", longPoolCfg.Path), zap.String("dst", longPoolPath))
+			mgr.FileResource.longPoolMetaFilePath = longPoolPath
+			return nil
+		})
+	}
+
+	if localLongPoolCfg == nil || localShortPoolCfg == nil {
+		jobs = append(jobs, func() error {
+			old := mgr.poolGetter
+			//new pool Getter
+			poolGet := preprocess.NewPoolWrapper(envCfg, []config.PoolConfig{
+				*shortPoolCfg, *longPoolCfg,
+			})
+			if poolGet != nil {
+				mgr.poolGetter = poolGet
+				if old != nil {
+					old.Close()
+				}
+			}
+			return nil
+		})
+	} else {
+		//reload   pool Getter
+		job := mgr.poolGetter.GetUpdateFileJob(envCfg, []config.PoolConfig{
+			*shortPoolCfg, *longPoolCfg,
+		})
+		if job != nil {
+			jobs = append(jobs, job)
+		}
+	}
+
+	//update model
+	if localModelCfg == nil || localModelCfg.Version != modelCfg.Version {
+		jobs = append(jobs, func() error {
 			old := mgr.getInfer()
-			ins := wrapper.NewWrapper(poolPath, luaPath, lubanPath, modelPath)
+			//reload model
+			ins := wrapper.NewWrapper(mgr.FileResource.shortPoolMetaFilePath,
+				mgr.FileResource.ModelConfig.Lua, mgr.FileResource.ModelConfig.Kit, mgr.FileResource.ModelConfig.Path)
 			if ins != nil {
-				atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.ins)), unsafe.Pointer(ins))
-				mgr.curShortPoolCfg = *shortPoolCfg
-				mgr.curModelCfg = *modelCfg
+				atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.modelIns)), unsafe.Pointer(ins))
 			}
 			if old != nil {
 				old.Close()
 			}
-
-		}
-		jobs = append(jobs, job)
-	}
-
-	if mgr.preprocesser == nil {
-		longPoolCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolLongFilePath)
-		if err != nil {
 			return nil
-		}
-		jobs = append(jobs, func() {
-			mgr.preprocesser = preprocess.NewPreProcesser(envCfg, []config.PoolConfig{
-				*shortPoolCfg, *longPoolCfg,
-			}, *modelCfg)
-			mgr.curLongPooCfg = *longPoolCfg
 		})
-	} else {
-		longPoolCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolLongFilePath)
-		if err != nil {
-			zlog.LOG.Error("config.GetPoolConfig", zap.String("PoolLongFilePath", config.AppConfigInstance.PoolLongFilePath), zap.Error(err))
-		} else {
-			job := mgr.preprocesser.GetUpdateJob(envCfg, []config.PoolConfig{
-				*shortPoolCfg, *longPoolCfg,
-			}, *modelCfg)
-			if job != nil {
-				jobs = append(jobs, func() {
-					job()
-					mgr.curLongPooCfg = *longPoolCfg
-				})
-			}
-
-		}
-
 	}
-	if len(jobs) > 0 {
-		return func() {
-			for i := 0; i < len(jobs); i++ {
-				jobs[i]()
+
+	//  reload lua plugin
+
+	if localModelCfg == nil || localModelCfg.Version != modelCfg.Version {
+		jobs = append(jobs, func() error {
+			luaToolkit := preprocess.NewLuaToolKit(modelCfg.Lua)
+			old := (*preprocess.PreProcessToolKit)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&p.luaToolkit))))
+			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit)), unsafe.Pointer(&luaToolkit))
+			if old != nil {
+				old.Close()
 			}
-		}
+			return nil
+		})
 	}
-	return nil
+
+	return jobs
+}
+
+func (mgr *Manager) preProcessUser(pool *preprocess.PoolWrapper, userFeatureJson []byte) unsafe.Pointer {
+	toolkitPorcess := (*preprocess.PreProcessToolKit)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit))))
+
+	toolkitPorcess.Retain()
+	defer toolkitPorcess.Release()
+	return toolkitPorcess.ProcessUser(pool, userFeatureJson)
 }
 
 func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, error) {
@@ -164,17 +271,14 @@ func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, e
 	infer.Retain()
 	defer infer.Release()
 	featData := []byte(userFeatureJson)
-	if mgr.preprocesser != nil {
-		mutFeat := mgr.preprocesser.ProcessUser(featData)
-		if mutFeat == nil {
-			return nil, errors.New("preprocess user error")
-		}
-		var err error
-		featData, err = sonic.Marshal(mutFeat)
-		if err != nil {
-			return nil, err
-		}
+	if mgr.preprocessToolkit == nil {
+		return nil, errors.New("preprocess empty")
 	}
+	rowsPtr := mgr.preProcessUser(pool, featData)
+
+	//TODO delete
+	//defer
+
 	parallelNum := runtime.NumCPU()
 	if parallelNum == 0 {
 		parallelNum = 2

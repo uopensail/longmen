@@ -27,6 +27,20 @@ type PoolConfig struct {
 	Version string `json:"version" toml:"version" yaml:"version"`
 }
 
+func (conf *PoolConfig) Init(filePath string) error {
+	fData, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Errorf("ioutil.ReadFile error: %s", err)
+		return err
+	}
+	_, err = toml.Decode(string(fData), conf)
+	if err != nil {
+		fmt.Errorf("Unmarshal error: %s", err)
+		return err
+	}
+	return nil
+}
+
 type ModelConfig struct {
 	Path    string `json:"path" toml:"path" yaml:"path"`
 	Kit     string `json:"kit" toml:"kit" yaml:"kit"`
@@ -34,9 +48,18 @@ type ModelConfig struct {
 	Version string `json:"version" toml:"version" yaml:"version"`
 }
 
-type PoolModelConfig struct {
-	ModelConfig `json:"model" toml:"model" yaml:"model"`
-	PoolConfig  `json:"pool" toml:"pool" yaml:"pool"`
+func (conf *ModelConfig) Init(filePath string) error {
+	fData, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Errorf("ioutil.ReadFile error: %s", err)
+		return err
+	}
+	_, err = toml.Decode(string(fData), conf)
+	if err != nil {
+		fmt.Errorf("Unmarshal error: %s", err)
+		return err
+	}
+	return nil
 }
 
 type AppConfig struct {

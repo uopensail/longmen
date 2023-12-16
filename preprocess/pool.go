@@ -14,88 +14,14 @@ import "C"
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"unsafe"
 
-	"github.com/bytedance/sonic"
 	"github.com/uopensail/longmen/config"
 	"github.com/uopensail/ulib/commonconfig"
 	"github.com/uopensail/ulib/finder"
-	"github.com/uopensail/ulib/sample"
-	"github.com/uopensail/ulib/utils"
 	"github.com/uopensail/ulib/zlog"
 	"go.uber.org/zap"
 )
-
-type SampleToolKitWrapper struct {
-	utils.Reference
-	cPtr unsafe.Pointer
-}
-
-func NewSampleToolKitWrapper(luaPluginFilePath string) *SampleToolKitWrapper {
-	fielPathC := C.CString(luaPluginFilePath)
-	defer C.free(unsafe.Pointer(fielPathC))
-	cPtr := C.sample_luban_new_toolkit(fielPathC)
-	toolkit := &SampleToolKitWrapper{
-		cPtr: cPtr,
-	}
-	toolkit.CloseHandler = func() {
-		if cPtr != nil {
-			C.sample_luban_delete_toolkit(cPtr)
-		}
-	}
-	return toolkit
-}
-
-func convertFeature(outJsonData []byte) *sample.MutableFeatures {
-	feats := sample.NewMutableFeatures()
-	err := sonic.Unmarshal(outJsonData, &feats)
-	if err != nil {
-		return nil
-	}
-	return feats
-}
-
-func (toolkit *SampleToolKitWrapper) ProcessUser(pool *PoolWrapper, userFeatureJson []byte) *sample.MutableFeatures {
-
-	if len(userFeatureJson) == 0 {
-		return nil
-	}
-	outC := C.sample_luban_process_user(toolkit.cPtr, pool.cPtr, (*C.char)(unsafe.Pointer(&userFeatureJson[0])), C.int(len(userFeatureJson)))
-	if outC != nil {
-		defer C.free(unsafe.Pointer(outC))
-	} else {
-		return nil
-	}
-	outLen := C.strlen(outC)
-	slice := &reflect.SliceHeader{Data: uintptr(unsafe.Pointer(outC)), Len: int(outLen), Cap: int(outLen)}
-
-	outJsonData := *(*[]byte)(unsafe.Pointer(slice))
-
-	return convertFeature(outJsonData)
-}
-
-func (toolkit *SampleToolKitWrapper) ProcessItem(pool *PoolWrapper, itemID string) *sample.MutableFeatures {
-
-	if len(itemID) == 0 {
-		return nil
-	}
-	itemIDC := C.CString(itemID)
-	defer C.free(unsafe.Pointer(itemIDC))
-
-	outC := C.sample_luban_process_item(toolkit.cPtr, pool.cPtr, itemIDC, C.int(len(itemID)))
-	if outC != nil {
-		defer C.free(unsafe.Pointer(outC))
-	} else {
-		return nil
-	}
-	outLen := C.strlen(outC)
-	slice := &reflect.SliceHeader{Data: uintptr(unsafe.Pointer(outC)), Len: int(outLen), Cap: int(outLen)}
-
-	outJsonData := *(*[]byte)(unsafe.Pointer(slice))
-
-	return convertFeature(outJsonData)
-}
 
 func downloadFile(dw finder.IFinder, dwCfg commonconfig.DownloaderConfig) (int64, error) {
 
@@ -124,7 +50,7 @@ func fileExists(filename string) bool {
 	return true // returns true if error is not nil and it's not a "not exists" error
 }
 
-func converDownloadFileInfo(envCfg config.EnvConfig, pool config.PoolConfig) commonconfig.DownloaderConfig {
+func ConverDownloadFileInfo(envCfg config.EnvConfig, pool config.PoolConfig) commonconfig.DownloaderConfig {
 	localDir := filepath.Join(envCfg.WorkDir, "pools")
 	os.MkdirAll(localDir, os.ModePerm)
 	localPath := filepath.Join(localDir, pool.Name)
@@ -140,7 +66,7 @@ func NewPoolWrapper(envCfg config.EnvConfig, pools []config.PoolConfig) *PoolWra
 	fileInfos := make([]commonconfig.DownloaderConfig, len(pools))
 
 	for i := 0; i < len(fileInfos); i++ {
-		fileInfos[i] = converDownloadFileInfo(envCfg, pools[i])
+		fileInfos[i] = ConverDownloadFileInfo(envCfg, pools[i])
 		dw := finder.GetFinder(&fileInfos[i].FinderConfig)
 		//Download
 		_, err := downloadFile(dw, fileInfos[i])
@@ -172,23 +98,23 @@ func (pool *PoolWrapper) Close() {
 	}
 }
 
-func (pool *PoolWrapper) GetUpdateFileJob(envCfg config.EnvConfig, pools []config.PoolConfig) func() {
+func (pool *PoolWrapper) GetUpdateFileJob(envCfg config.EnvConfig, pools []config.PoolConfig) func() error {
 
-	jobs := make([]func(), 0, len(pools))
+	jobs := make([]func() error, 0, len(pools))
 	for i := 0; i < len(pools); i++ {
 		index := i
 		newPoolInfo := pools[index]
 		if newPoolInfo.Version == pool.poolFileInfos[index].Version {
 			continue
 		}
-		newInfo := converDownloadFileInfo(envCfg, pools[index])
-		job := func() {
+		newInfo := ConverDownloadFileInfo(envCfg, pools[index])
+		job := func() error {
 			dw := finder.GetFinder(&newInfo.FinderConfig)
 			//Download
 			_, err := downloadFile(dw, newInfo)
 			if err != nil {
 				zlog.LOG.Error("GetUpdateFileJob error", zap.String("source", newInfo.SourcePath), zap.Error(err))
-				return
+				return err
 			}
 
 			cString := C.CString(newInfo.LocalPath)
@@ -197,14 +123,19 @@ func (pool *PoolWrapper) GetUpdateFileJob(envCfg config.EnvConfig, pools []confi
 			pool.poolFileInfos[index] = newPoolInfo
 			zlog.LOG.Info("sample_luban_update_pool Success", zap.String("source", newInfo.SourcePath),
 				zap.String("localpath", newInfo.LocalPath))
+			return nil
 		}
 		jobs = append(jobs, job)
 	}
 	if len(jobs) > 0 {
-		return func() {
+		return func() error {
 			for i := 0; i < len(jobs); i++ {
-				jobs[i]()
+				err := jobs[i]()
+				if err != nil {
+					return err
+				}
 			}
+			return nil
 		}
 	}
 	return nil

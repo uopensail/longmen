@@ -153,15 +153,9 @@ Model::Model(std::string_view pool, std::string_view lua_plugin,
   }
   reader.close();
 }
-
-void Model::forward(char *user_features, size_t len, char **items,
-                    int64_t *lens, int size, float *scores) {
-  auto user_feas =
-      std::make_shared<luban::Features>(std::string_view{user_features, len});
-
-  // luban to process user features
-  auto user_rows = m_toolkit->process_user(user_feas);
-
+void Model::forward(luban::Rows* user_rows, char **items, int64_t *lens,
+               int size, float *scores) {
+   
   Input input(m_toolkit->m_groups.size());
 
   for (auto &group : m_toolkit->m_groups) {
@@ -179,7 +173,7 @@ void Model::forward(char *user_features, size_t len, char **items,
   for (size_t i = 0; i < size; i++) {
     // copy user processed features
     for (auto &group : m_toolkit->m_user_placer->m_groups) {
-      data = (*user_rows)[group.index]->m_data;
+      data = user_rows->operator[](group.index)->m_data;
       input[group.id]->set_row(i, data);
     }
 
@@ -203,5 +197,15 @@ void Model::forward(char *user_features, size_t len, char **items,
         scores[i] = -1.0;
     }
   }
-  free_bitmap(not_found_bitmap);
+  free_bitmap(not_found_bitmap);             
+}
+
+void Model::forward(char *user_features, size_t len, char **items,
+                    int64_t *lens, int size, float *scores) {
+  auto user_feas =
+      std::make_shared<luban::Features>(std::string_view{user_features, len});
+
+  // luban to process user features
+  auto user_rows = m_toolkit->process_user(user_feas);
+  forward(user_rows.get(), items, lens,size, scores);
 }

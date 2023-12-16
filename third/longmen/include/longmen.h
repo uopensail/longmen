@@ -26,6 +26,9 @@ void *longmen_new_model(char *path, int plen, char *key, int klen,
 void longmen_del_model(void *model);
 void longmen_forward(void *model, char *user_features, int len, char *items,
                      void *lens, int size, float *scores);
+
+void longmen_forward_rows(void *model, void* rows_ptr, char *items,
+                     void *lens, int size, float *scores);
 #ifdef __cplusplus
 } /* end extern "C"*/
 #endif

@@ -77,7 +77,8 @@ public:
   ~Model() = default;
   void forward(char *user_features, size_t len, char **items, int64_t *lens,
                int size, float *scores);
-
+  void forward(luban::Rows* row, char **items, int64_t *lens,
+               int size, float *scores);
 private:
   std::shared_ptr<luban::Toolkit> m_toolkit;
   std::shared_ptr<TorchModel> m_model;
