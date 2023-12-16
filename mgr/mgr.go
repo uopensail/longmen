@@ -22,16 +22,20 @@ import (
 	"go.uber.org/zap"
 )
 
+type ModelFileRessource struct {
+	modelFilePath, luaFilePath, lubanFilePath string
+}
 type FileResource struct {
-	shortPoolMetaFilePath string
-	longPoolMetaFilePath  string
-	modelMetaFilePath     string
-	config.ModelConfig
+	shortPoolFilePath string
+	longPoolFilePath  string
+	modelDir          string
+
+	ModelFileRessource
 }
 
 func (res *FileResource) GetLocalShortPoolMeta() *config.PoolConfig {
 	cfg := config.PoolConfig{}
-	err := cfg.Init(res.shortPoolMetaFilePath)
+	err := cfg.Init(res.shortPoolFilePath + ".meta")
 	if err != nil {
 		return nil
 	}
@@ -40,7 +44,7 @@ func (res *FileResource) GetLocalShortPoolMeta() *config.PoolConfig {
 
 func (res *FileResource) GetLocalLongPoolMeta() *config.PoolConfig {
 	cfg := config.PoolConfig{}
-	err := cfg.Init(res.longPoolMetaFilePath)
+	err := cfg.Init(res.longPoolFilePath + ".meta")
 	if err != nil {
 		return nil
 	}
@@ -49,7 +53,7 @@ func (res *FileResource) GetLocalLongPoolMeta() *config.PoolConfig {
 
 func (res *FileResource) GetLocalModelMeta() *config.ModelConfig {
 	cfg := config.ModelConfig{}
-	err := cfg.Init(res.modelMetaFilePath)
+	err := cfg.Init(res.modelDir + ".meta")
 	if err != nil {
 		return nil
 	}
@@ -93,11 +97,20 @@ func (mgr *Manager) cronJob(envCfg config.EnvConfig, jobUtil *utils.MetuxJobUtil
 			<-ticker.C
 			jobs := mgr.loadAllJob(envCfg)
 			job := func() {
+				hasErr := false
+
 				for i := 0; i < len(jobs); i++ {
 					job := jobs[i]
 					if job != nil {
-						job()
+						err := job()
+						if err != nil {
+							hasErr = true
+						}
 					}
+				}
+				if hasErr {
+					//clean dir
+					os.RemoveAll(envCfg.WorkDir)
 				}
 			}
 			jobUtil.TryRun(job)
@@ -118,16 +131,17 @@ func getPath(workDir, dir, src string) string {
 
 // Do not modify the execution order
 func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
-	shortPoolCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolShortFilePath)
+	os.MkdirAll(envCfg.WorkDir, os.ModePerm)
+	shortPoolRemoteCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolShortFilePath)
 	if err != nil {
 		return nil
 	}
 
-	modelCfg, err := config.AppConfigInstance.GetModelConfig()
+	modelRemoteCfg, err := config.AppConfigInstance.GetModelConfig()
 	if err != nil {
 		return nil
 	}
-	longPoolCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolLongFilePath)
+	longPoolRemoteCfg, err := config.AppConfigInstance.GetPoolConfig(config.AppConfigInstance.PoolLongFilePath)
 	if err != nil {
 		return nil
 	}
@@ -137,62 +151,90 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 
 	jobs := make([]func() error, 0, 2)
 
-	if localShortPoolCfg == nil || localShortPoolCfg.Version != shortPoolCfg.Version {
+	if localShortPoolCfg == nil || localShortPoolCfg.Version != shortPoolRemoteCfg.Version {
 		jobs = append(jobs, func() error {
-			dwFilePath := getPath(envCfg.WorkDir, "pool", shortPoolCfg.Path)
-			err := mgr.downloadFile(envCfg, shortPoolCfg.Path, dwFilePath)
+			dwFilePath := getPath(envCfg.WorkDir, "pool", shortPoolRemoteCfg.Path)
+			err := mgr.downloadFile(envCfg, shortPoolRemoteCfg.Path, dwFilePath)
 			if err != nil {
-				zlog.LOG.Warn("download file   error", zap.String("source", shortPoolCfg.Path), zap.Error(err))
+				zlog.LOG.Warn("download file   error", zap.String("source", shortPoolRemoteCfg.Path), zap.Error(err))
 				return err
 			}
-			zlog.LOG.Info("download file success", zap.String("source", shortPoolCfg.Path), zap.String("dst", dwFilePath))
-			mgr.FileResource.shortPoolMetaFilePath = dwFilePath
+			zlog.LOG.Info("download file success", zap.String("source", shortPoolRemoteCfg.Path), zap.String("dst", dwFilePath))
+
+			mgr.FileResource.shortPoolFilePath = dwFilePath
+			newLocalConfig := config.PoolConfig{
+				Name:    shortPoolRemoteCfg.Name,
+				Path:    dwFilePath,
+				Version: shortPoolRemoteCfg.Version,
+			}
+			newLocalConfig.Dump(dwFilePath + ".meta")
 			return nil
 		})
 	}
 
-	if localModelCfg == nil || localModelCfg.Version != modelCfg.Version {
+	if localModelCfg == nil || localModelCfg.Version != modelRemoteCfg.Version {
 		jobs = append(jobs, func() error {
+			modelDir := filepath.Join(envCfg.WorkDir, "model")
+			os.MkdirAll(modelDir, os.ModePerm)
+
 			//download model.pt
-			dwFilePath := getPath(envCfg.WorkDir, "model", modelCfg.Path)
-			err := mgr.downloadFile(envCfg, localModelCfg.Path, dwFilePath)
+			modelFilePath := filepath.Join(modelDir, filepath.Base(modelRemoteCfg.CheckpiontPath))
+			err := mgr.downloadFile(envCfg, modelRemoteCfg.CheckpiontPath, modelFilePath)
 			if err != nil {
-				zlog.LOG.Warn("download file   error", zap.String("source", localModelCfg.Path), zap.Error(err))
+				zlog.LOG.Warn("download file   error", zap.String("source", localModelCfg.CheckpiontPath), zap.Error(err))
 				return err
 			}
-			zlog.LOG.Info("download file success", zap.String("source", localModelCfg.Path), zap.String("dst", dwFilePath))
+			zlog.LOG.Info("download file success", zap.String("source", localModelCfg.CheckpiontPath),
+				zap.String("dst", modelFilePath))
 
 			//download luban.json
-			lubanPath := getPath(envCfg.WorkDir, "model", modelCfg.Kit)
-			err = mgr.downloadFile(envCfg, modelCfg.Kit, lubanPath)
+			lubanPath := filepath.Join(modelDir, filepath.Base(modelRemoteCfg.Kit))
+			err = mgr.downloadFile(envCfg, modelRemoteCfg.Kit, lubanPath)
 			if err != nil {
 				return err
 			}
-			zlog.LOG.Info("download file success", zap.String("source", modelCfg.Kit), zap.String("dst", lubanPath))
+			zlog.LOG.Info("download file success", zap.String("source", modelRemoteCfg.Kit),
+				zap.String("dst", lubanPath))
 			//download model.lua
-			luaPath := getPath(envCfg.WorkDir, "model", modelCfg.Lua)
-			err = mgr.downloadFile(envCfg, modelCfg.Lua, luaPath)
+			luaPath := filepath.Join(modelDir, filepath.Base(modelRemoteCfg.Lua))
+			err = mgr.downloadFile(envCfg, modelRemoteCfg.Lua, luaPath)
 			if err != nil {
 				return err
 			}
-			zlog.LOG.Info("download file success", zap.String("source", modelCfg.Lua), zap.String("dst", luaPath))
-			mgr.FileResource.ModelConfig = *modelCfg
-			mgr.FileResource.modelMetaFilePath = dwFilePath
+			zlog.LOG.Info("download file success", zap.String("source", modelRemoteCfg.Lua), zap.String("dst", luaPath))
+			mgr.FileResource.ModelFileRessource = ModelFileRessource{
+				modelFilePath: modelFilePath,
+				luaFilePath:   luaPath,
+				lubanFilePath: lubanPath,
+			}
+			newLocalConfig := config.ModelConfig{
+				CheckpiontPath: modelFilePath,
+				Lua:            luaPath,
+				Kit:            lubanPath,
+				Version:        shortPoolRemoteCfg.Version,
+			}
+			newLocalConfig.Dump(modelDir + ".meta")
 			return nil
 		})
 	}
 
-	if localLongPoolCfg == nil || localLongPoolCfg.Version != longPoolCfg.Version {
+	if localLongPoolCfg == nil || localLongPoolCfg.Version != longPoolRemoteCfg.Version {
 		jobs = append(jobs, func() error {
 			//download pool.json
-			longPoolPath := getPath(envCfg.WorkDir, "pool", longPoolCfg.Path)
-			err := mgr.downloadFile(envCfg, longPoolCfg.Path, longPoolPath)
+			longPoolPath := getPath(envCfg.WorkDir, "pool", longPoolRemoteCfg.Path)
+			err := mgr.downloadFile(envCfg, longPoolRemoteCfg.Path, longPoolPath)
 			if err != nil {
-				zlog.LOG.Warn("download file   error", zap.String("source", longPoolCfg.Path), zap.Error(err))
+				zlog.LOG.Warn("download file   error", zap.String("source", longPoolRemoteCfg.Path), zap.Error(err))
 				return err
 			}
-			zlog.LOG.Info("download file success", zap.String("source", longPoolCfg.Path), zap.String("dst", longPoolPath))
-			mgr.FileResource.longPoolMetaFilePath = longPoolPath
+			zlog.LOG.Info("download file success", zap.String("source", longPoolRemoteCfg.Path), zap.String("dst", longPoolPath))
+			mgr.FileResource.longPoolFilePath = longPoolPath
+			newLocalConfig := config.PoolConfig{
+				Name:    longPoolRemoteCfg.Name,
+				Path:    longPoolPath,
+				Version: longPoolRemoteCfg.Version,
+			}
+			newLocalConfig.Dump(longPoolPath + ".meta")
 			return nil
 		})
 	}
@@ -201,8 +243,8 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 		jobs = append(jobs, func() error {
 			old := mgr.poolGetter
 			//new pool Getter
-			poolGet := preprocess.NewPoolWrapper(envCfg, []config.PoolConfig{
-				*shortPoolCfg, *longPoolCfg,
+			poolGet := preprocess.NewPoolWrapper([]string{
+				mgr.shortPoolFilePath, mgr.longPoolFilePath,
 			})
 			if poolGet != nil {
 				mgr.poolGetter = poolGet
@@ -214,41 +256,52 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 		})
 	} else {
 		//reload   pool Getter
-		job := mgr.poolGetter.GetUpdateFileJob(envCfg, []config.PoolConfig{
-			*shortPoolCfg, *longPoolCfg,
-		})
+		files := make([]string, 2)
+		if localShortPoolCfg == nil || localShortPoolCfg.Version != shortPoolRemoteCfg.Version {
+			files[0] = mgr.FileResource.shortPoolFilePath
+		}
+		if localLongPoolCfg == nil || localLongPoolCfg.Version != longPoolRemoteCfg.Version {
+			files[1] = mgr.FileResource.longPoolFilePath
+		}
+		job := mgr.poolGetter.GetUpdateFileJob(files)
 		if job != nil {
 			jobs = append(jobs, job)
 		}
 	}
 
 	//update model
-	if localModelCfg == nil || localModelCfg.Version != modelCfg.Version {
+	if localModelCfg == nil || localModelCfg.Version != modelRemoteCfg.Version {
 		jobs = append(jobs, func() error {
 			old := mgr.getInfer()
 			//reload model
-			ins := wrapper.NewWrapper(mgr.FileResource.shortPoolMetaFilePath,
-				mgr.FileResource.ModelConfig.Lua, mgr.FileResource.ModelConfig.Kit, mgr.FileResource.ModelConfig.Path)
+			ins := wrapper.NewWrapper(mgr.FileResource.shortPoolFilePath,
+				mgr.FileResource.ModelFileRessource.luaFilePath,
+				mgr.FileResource.ModelFileRessource.lubanFilePath,
+				mgr.FileResource.ModelFileRessource.modelFilePath)
 			if ins != nil {
 				atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.modelIns)), unsafe.Pointer(ins))
+				if old != nil {
+					old.Close()
+				}
 			}
-			if old != nil {
-				old.Close()
-			}
+
 			return nil
 		})
 	}
 
 	//  reload lua plugin
 
-	if localModelCfg == nil || localModelCfg.Version != modelCfg.Version {
+	if localModelCfg == nil || localModelCfg.Version != modelRemoteCfg.Version {
 		jobs = append(jobs, func() error {
-			preprocessToolkit := preprocess.NewLuaToolKit(modelCfg.Lua, modelCfg.Kit)
+			preprocessToolkit := preprocess.NewPreProcessToolKit(modelRemoteCfg.Lua, modelRemoteCfg.Kit)
 			old := (*preprocess.PreProcessToolKit)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit))))
-			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit)), unsafe.Pointer(&preprocessToolkit))
-			if old != nil {
-				old.Close()
+			if preprocessToolkit != nil {
+				atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit)), unsafe.Pointer(&preprocessToolkit))
+				if old != nil {
+					old.Close()
+				}
 			}
+
 			return nil
 		})
 	}

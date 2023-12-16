@@ -20,6 +20,7 @@ message Response {
   string userId = 2;
   repeated Record records = 3;
   map<string, string> extras = 4;
+  
 }
 
 service Rank {

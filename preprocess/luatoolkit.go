@@ -75,7 +75,7 @@ type PreProcessToolKit struct {
 	workers []*toolkitWorker
 }
 
-func NewLuaToolKit(luaPath, lubanPath string) *PreProcessToolKit {
+func NewPreProcessToolKit(luaPath, lubanPath string) *PreProcessToolKit {
 
 	chanSize := 10000
 	num := runtime.NumCPU()
@@ -112,9 +112,9 @@ func (toolkit *PreProcessToolKit) ProcessUser(pool *PoolWrapper, userFeatureJson
 	job := toolkitJob{
 		pool:          pool,
 		userFeatrJson: userFeatureJson,
-		onDone: func(ret *jobResult) {
+		onDone: func(x *jobResult) {
 			defer wg.Done()
-			ret.rows = ret.rows
+			ret.rows = x.rows
 
 		},
 	}

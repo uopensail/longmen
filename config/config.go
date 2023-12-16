@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -17,9 +18,6 @@ type EnvConfig struct {
 	Finder  commonconfig.FinderConfig `json:"finder" toml:"finder"`
 	WorkDir string                    `json:"work_dir" toml:"work_dir"`
 }
-
-const POOL_KEY_FORMAT = "/pools/%s"
-const MODEL_KEY_FORMAT = "/longmen/models/%s"
 
 type PoolConfig struct {
 	Name    string `json:"name" toml:"name" yaml:"name"`
@@ -41,11 +39,39 @@ func (conf *PoolConfig) Init(filePath string) error {
 	return nil
 }
 
+func (conf *PoolConfig) Dump(filePath string) {
+	fd, err := os.Create(filePath)
+	if err != nil {
+		fmt.Errorf("ioutil.ReadFile error: %s", err)
+		return
+	}
+	err = toml.NewEncoder(fd).Encode(conf)
+	if err != nil {
+		fmt.Errorf("Unmarshal error: %s", err)
+		return
+	}
+	return
+}
+
 type ModelConfig struct {
-	Path    string `json:"path" toml:"path" yaml:"path"`
-	Kit     string `json:"kit" toml:"kit" yaml:"kit"`
-	Lua     string `json:"lua" toml:"lua" yaml:"lua"`
-	Version string `json:"version" toml:"version" yaml:"version"`
+	CheckpiontPath string `json:"path" toml:"path" yaml:"path"`
+	Kit            string `json:"kit" toml:"kit" yaml:"kit"`
+	Lua            string `json:"lua" toml:"lua" yaml:"lua"`
+	Version        string `json:"version" toml:"version" yaml:"version"`
+}
+
+func (conf *ModelConfig) Dump(filePath string) {
+	fd, err := os.Create(filePath)
+	if err != nil {
+		fmt.Errorf("ioutil.ReadFile error: %s", err)
+		return
+	}
+	err = toml.NewEncoder(fd).Encode(conf)
+	if err != nil {
+		fmt.Errorf("Unmarshal error: %s", err)
+		return
+	}
+	return
 }
 
 func (conf *ModelConfig) Init(filePath string) error {
@@ -207,4 +233,5 @@ func (conf *AppConfig) Init(filePath string) {
 		panic(err)
 	}
 	fmt.Printf("InitAppConfig:%v yaml:%s\n", conf, string(fData))
+	conf.EnvConfig.WorkDir = filepath.Join(conf.EnvConfig.WorkDir, "longmen")
 }
