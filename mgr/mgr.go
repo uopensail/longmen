@@ -26,16 +26,14 @@ type ModelFileRessource struct {
 	modelFilePath, luaFilePath, lubanFilePath string
 }
 type FileResource struct {
-	shortPoolFilePath string
-	longPoolFilePath  string
-	modelDir          string
-
-	ModelFileRessource
+	shortPoolLocalMeta config.PoolConfig
+	longPoolLocalMeta  config.PoolConfig
+	modelLocalMeta     config.ModelConfig
 }
 
 func (res *FileResource) GetLocalShortPoolMeta() *config.PoolConfig {
 	cfg := config.PoolConfig{}
-	err := cfg.Init(res.shortPoolFilePath + ".meta")
+	err := cfg.Init(res.shortPoolLocalMeta.Path + ".meta")
 	if err != nil {
 		return nil
 	}
@@ -44,7 +42,7 @@ func (res *FileResource) GetLocalShortPoolMeta() *config.PoolConfig {
 
 func (res *FileResource) GetLocalLongPoolMeta() *config.PoolConfig {
 	cfg := config.PoolConfig{}
-	err := cfg.Init(res.longPoolFilePath + ".meta")
+	err := cfg.Init(res.longPoolLocalMeta.Path + ".meta")
 	if err != nil {
 		return nil
 	}
@@ -53,7 +51,7 @@ func (res *FileResource) GetLocalLongPoolMeta() *config.PoolConfig {
 
 func (res *FileResource) GetLocalModelMeta() *config.ModelConfig {
 	cfg := config.ModelConfig{}
-	err := cfg.Init(res.modelDir + ".meta")
+	err := cfg.Init(res.modelLocalMeta.CheckpiontPath + ".meta")
 	if err != nil {
 		return nil
 	}
@@ -161,13 +159,13 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 			}
 			zlog.LOG.Info("download file success", zap.String("source", shortPoolRemoteCfg.Path), zap.String("dst", dwFilePath))
 
-			mgr.FileResource.shortPoolFilePath = dwFilePath
 			newLocalConfig := config.PoolConfig{
 				Name:    shortPoolRemoteCfg.Name,
 				Path:    dwFilePath,
 				Version: shortPoolRemoteCfg.Version,
 			}
-			newLocalConfig.Dump(dwFilePath + ".meta")
+			mgr.FileResource.shortPoolLocalMeta = newLocalConfig
+			newLocalConfig.Dump(mgr.FileResource.shortPoolLocalMeta.Path + ".meta")
 			return nil
 		})
 	}
@@ -202,18 +200,15 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 				return err
 			}
 			zlog.LOG.Info("download file success", zap.String("source", modelRemoteCfg.Lua), zap.String("dst", luaPath))
-			mgr.FileResource.ModelFileRessource = ModelFileRessource{
-				modelFilePath: modelFilePath,
-				luaFilePath:   luaPath,
-				lubanFilePath: lubanPath,
-			}
+
 			newLocalConfig := config.ModelConfig{
 				CheckpiontPath: modelFilePath,
 				Lua:            luaPath,
 				Kit:            lubanPath,
 				Version:        shortPoolRemoteCfg.Version,
 			}
-			newLocalConfig.Dump(modelDir + ".meta")
+			mgr.modelLocalMeta = newLocalConfig
+			newLocalConfig.Dump(mgr.FileResource.modelLocalMeta.CheckpiontPath + ".meta")
 			return nil
 		})
 	}
@@ -228,13 +223,13 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 				return err
 			}
 			zlog.LOG.Info("download file success", zap.String("source", longPoolRemoteCfg.Path), zap.String("dst", longPoolPath))
-			mgr.FileResource.longPoolFilePath = longPoolPath
 			newLocalConfig := config.PoolConfig{
 				Name:    longPoolRemoteCfg.Name,
 				Path:    longPoolPath,
 				Version: longPoolRemoteCfg.Version,
 			}
-			newLocalConfig.Dump(longPoolPath + ".meta")
+			mgr.longPoolLocalMeta = newLocalConfig
+			newLocalConfig.Dump(mgr.longPoolLocalMeta.Path + ".meta")
 			return nil
 		})
 	}
@@ -244,7 +239,7 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 			old := mgr.poolGetter
 			//new pool Getter
 			poolGet := preprocess.NewPoolWrapper([]string{
-				mgr.shortPoolFilePath, mgr.longPoolFilePath,
+				mgr.shortPoolLocalMeta.Path, mgr.longPoolLocalMeta.Path,
 			})
 			if poolGet != nil {
 				mgr.poolGetter = poolGet
@@ -258,10 +253,10 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 		//reload   pool Getter
 		files := make([]string, 2)
 		if localShortPoolCfg == nil || localShortPoolCfg.Version != shortPoolRemoteCfg.Version {
-			files[0] = mgr.FileResource.shortPoolFilePath
+			files[0] = mgr.FileResource.shortPoolLocalMeta.Path
 		}
 		if localLongPoolCfg == nil || localLongPoolCfg.Version != longPoolRemoteCfg.Version {
-			files[1] = mgr.FileResource.longPoolFilePath
+			files[1] = mgr.FileResource.longPoolLocalMeta.Path
 		}
 		job := mgr.poolGetter.GetUpdateFileJob(files)
 		if job != nil {
@@ -274,10 +269,10 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 		jobs = append(jobs, func() error {
 			old := mgr.getInfer()
 			//reload model
-			ins := wrapper.NewWrapper(mgr.FileResource.shortPoolFilePath,
-				mgr.FileResource.ModelFileRessource.luaFilePath,
-				mgr.FileResource.ModelFileRessource.lubanFilePath,
-				mgr.FileResource.ModelFileRessource.modelFilePath)
+			ins := wrapper.NewWrapper(mgr.FileResource.shortPoolLocalMeta.Path,
+				mgr.FileResource.modelLocalMeta.Lua,
+				mgr.FileResource.modelLocalMeta.Kit,
+				mgr.FileResource.modelLocalMeta.CheckpiontPath)
 			if ins != nil {
 				atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.modelIns)), unsafe.Pointer(ins))
 				if old != nil {
@@ -317,13 +312,13 @@ func (mgr *Manager) preProcessUser(pool *preprocess.PoolWrapper, userFeatureJson
 	return toolkitPorcess.ProcessUser(pool, userFeatureJson)
 }
 
-func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, error) {
+func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, map[string]string, error) {
 	stat := prome.NewStat("Manager.Rank")
 	defer stat.End()
 
 	featData := []byte(userFeatureJson)
 	if mgr.preprocessToolkit == nil {
-		return nil, errors.New("preprocess empty")
+		return nil, nil, errors.New("preprocess empty")
 	}
 	rowsPtr := mgr.preProcessUser(mgr.poolGetter, featData)
 
@@ -364,7 +359,11 @@ func (mgr *Manager) Rank(userFeatureJson string, itemIds []string) ([]float32, e
 		}(i, itemLen)
 	}
 	wg.Wait()
-	return score, nil
+	versionMap := map[string]string{
+		"version.pool":  mgr.shortPoolLocalMeta.Version,
+		"version.model": mgr.modelLocalMeta.Version,
+	}
+	return score, versionMap, nil
 }
 
 var MgrIns Manager

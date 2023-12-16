@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v4.23.3
-// source: api.proto
+// source: longmenapi.proto
 
 package longmenapi
 
@@ -101,5 +101,5 @@ var Rank_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api.proto",
+	Metadata: "longmenapi.proto",
 }

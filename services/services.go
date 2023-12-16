@@ -77,10 +77,11 @@ func (srv *Services) Rank(ctx context.Context, request *longmenapi.Request) (*lo
 	for i := 0; i < len(request.Records); i++ {
 		itemIds[i] = request.Records[i].Id
 	}
-	scores, err := mgr.MgrIns.Rank(request.UserFeatures, itemIds)
+	scores, versions, err := mgr.MgrIns.Rank(request.UserFeatures, itemIds)
 	resp := &longmenapi.Response{
 		UserId:  request.UserId,
 		Records: request.Records,
+		Extras:  versions,
 	}
 	for i := 0; i < len(request.Records); i++ {
 		resp.Records[i].Score = scores[i]
