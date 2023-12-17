@@ -54,7 +54,7 @@ func (conf *PoolConfig) Dump(filePath string) {
 }
 
 type ModelConfig struct {
-	CheckpiontPath string `json:"path" toml:"path" yaml:"path"`
+	CheckpiontPath string `json:"path" toml:"path" yaml:"path" mapstructure:"path"`
 	Kit            string `json:"kit" toml:"kit" yaml:"kit"`
 	Lua            string `json:"lua" toml:"lua" yaml:"lua"`
 	Version        string `json:"version" toml:"version" yaml:"version"`

@@ -291,7 +291,7 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 			preprocessToolkit := preprocess.NewPreProcessToolKit(modelRemoteCfg.Lua, modelRemoteCfg.Kit)
 			old := (*preprocess.PreProcessToolKit)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit))))
 			if preprocessToolkit != nil {
-				atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit)), unsafe.Pointer(&preprocessToolkit))
+				atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&mgr.preprocessToolkit)), unsafe.Pointer(preprocessToolkit))
 				if old != nil {
 					old.Close()
 				}
