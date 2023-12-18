@@ -179,10 +179,10 @@ func (mgr *Manager) loadAllJob(envCfg config.EnvConfig) []func() error {
 			modelFilePath := filepath.Join(modelDir, filepath.Base(modelRemoteCfg.CheckpiontPath))
 			err := mgr.downloadFile(envCfg, modelRemoteCfg.CheckpiontPath, modelFilePath)
 			if err != nil {
-				zlog.LOG.Warn("download file   error", zap.String("source", localModelCfg.CheckpiontPath), zap.Error(err))
+				zlog.LOG.Warn("download file   error", zap.String("source", modelRemoteCfg.CheckpiontPath), zap.Error(err))
 				return err
 			}
-			zlog.LOG.Info("download file success", zap.String("source", localModelCfg.CheckpiontPath),
+			zlog.LOG.Info("download file success", zap.String("source", modelRemoteCfg.CheckpiontPath),
 				zap.String("dst", modelFilePath))
 
 			//download luban.json

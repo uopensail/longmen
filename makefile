@@ -66,7 +66,7 @@ local: build-dev
 	mkdir -pv $(PUBLISHDIR)/lib
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
-dev: third-dev
+dev: build-dev
 	mkdir -pv $(PUBLISHDIR)/lib
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
