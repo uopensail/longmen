@@ -1,3 +1,4 @@
-[submodule "third/luban"]
-path = third/luban
-url = https://github.com/uopensail/luban.git
+[submodule "third/sample-luban"]
+	path = third/sample-luban
+	url = https://github.com/uopensail/sample-luban.git
+

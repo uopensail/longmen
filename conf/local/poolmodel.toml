@@ -1,8 +1,0 @@
-[model]
-path =""
-kit = ""
-version="20231010"
-[pool]
-path =""
-key = "d_s_id"
-version="20231010"
