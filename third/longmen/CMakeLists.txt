@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
  
 add_subdirectory(../sample-luban ./sample-luban)
 
-SET(LONGMEN_SOURCE src/longmen.cpp src/model.cpp )
+SET(LONGMEN_SOURCE src/longmen.cpp src/model.cpp src/pool_rows.cpp)
 
 add_library(longmen_static STATIC ${LONGMEN_SOURCE})
 target_link_libraries(longmen_static luban_static sample_luban_static "${TORCH_LIBRARIES}")

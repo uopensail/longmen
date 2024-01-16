@@ -24,34 +24,27 @@
 #include <filesystem>
 #include <torch/script.h>
 #include <vector>
+namespace longmen{
 
-class Tensor {
-public:
-  Tensor() = delete;
-  Tensor(int64_t rows, int64_t cols, int64_t stride, torch::Dtype type);
-  ~Tensor();
-  void set_row(int64_t row, char *data);
-  void print();
+std::vector<std::string> split(const std::string& str, char delimiter);
 
-public:
-  int64_t m_rows;
-  int64_t m_cols;
-  int64_t m_stride;
-  torch::Dtype m_type;
-  char *m_data;
+struct ModelInputEmbeddingMeta {
+  std::vector<std::string> keys;
+  std::vector<int> dims;
+  int sum_dims;
 };
+ 
 
 class Input {
 public:
   Input() = delete;
   Input(int size);
   ~Input();
-  Tensor *&operator[](int index);
-  void print();
 
 public:
   int m_size;
-  Tensor **m_tensors;
+  torch::Tensor* m_tensors;
+  std::vector<std::vector<int64_t>> m_tensor_sizes;
 };
 
 class TorchModel {
@@ -59,30 +52,25 @@ public:
   TorchModel() = delete;
   TorchModel(const TorchModel &) = delete;
   TorchModel(const TorchModel &&) = delete;
-  TorchModel(std::string_view path);
-  ~TorchModel();
-  void forward(Input &inputs, float *result);
+  TorchModel(std::string_view path, std::string_view graph_meta);
+  ~TorchModel() = default;
 
+  std::shared_ptr<ModelInputEmbeddingMeta> get_input_embedding_meta(int input_index) {
+    auto it = m_input_embedding_meta.find(input_index);
+    if (it == m_input_embedding_meta.end()) {
+      return nullptr;
+    } else {
+      return it->second;
+    }
+  }
+
+  torch::Tensor embedding_forward(std::shared_ptr<ModelInputEmbeddingMeta> input_meta, const torch::Tensor& input_keys);
+  void torch_forward(Input &inputs, float *result);
 private:
-  torch::jit::Module module_;
+ 
+  std::map<int, std::shared_ptr<ModelInputEmbeddingMeta>> m_input_embedding_meta;
+  torch::jit::Module m_torch_module;
 };
 
-class Model {
-public:
-  Model() = delete;
-  Model(const Model &) = delete;
-  Model(const Model &&) = delete;
-  Model(std::string_view pool, std::string_view lua_plugin, std::string_view toolkit,
-        std::string_view model);
-  ~Model() = default;
-  void forward(char *user_features, size_t len, char **items, int64_t *lens,
-               int size, float *scores);
-  void forward(luban::Rows* row, char **items, int64_t *lens,
-               int size, float *scores);
-private:
-  std::shared_ptr<luban::Toolkit> m_toolkit;
-  std::shared_ptr<TorchModel> m_model;
-  std::unordered_map<std::string, std::shared_ptr<luban::Rows>> m_pool;
-};
-
+}// namespace longmen
 #endif // LONGMAN_MODEL_H

@@ -21,14 +21,14 @@
 extern "C" {
 #endif
 
-void *longmen_new_model(char *path, int plen, char *key, int klen,
-                        char *toolkit, int tlen, char *model, int mlen);
-void longmen_del_model(void *model);
-void longmen_forward(void *model, char *user_features, int len, char *items,
-                     void *lens, int size, float *scores);
+void* longmen_new_pool_rows(const char* pool_file,const char* lua_file, const char* luban_file, void * model_ptr);
+void longmen_delete_pool_rows(void* ptr);
+void *new_longmen_torch_model(const char* model_file, const char* model_meta);
+void delete_longmen_torch_model(void *ptr);
+void longmen_user_rows_embedding_preforward(void *model_ptr, void *user_rows_ptr, void* pool_rows_ptr);
+void longmen_torch_model_inference(void*model_ptr,void* user_rows_ptr, void* pool_rows_ptr, char *items_ptr,
+                     void *lens_ptr, int size, float *scores);
 
-void longmen_forward_rows(void *model, void* rows_ptr, char *items,
-                     void *lens, int size, float *scores);
 #ifdef __cplusplus
 } /* end extern "C"*/
 #endif

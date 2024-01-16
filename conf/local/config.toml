@@ -1,6 +1,6 @@
-model = "test_model"
-pool = "test_pool"
-
+model = "/tmp/model.tar.gz"
+big_pool = "/tmp/test_pool.json"
+small_pool = "/tmp/test_small_pool.json"
 [server]
 project_name = "longmen"
 grpc_port = 9527
