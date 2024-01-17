@@ -42,33 +42,19 @@ third-prod:
 	find build_cpp -type f -name 'lib*' -exec cp {}  third/lib/$(OS)/$(ARCH)/ \;
 
 build: third-prod
-	mkdir -pv $(PUBLISHDIR)/lib
 	mkdir -pv $(PUBLISHDIR)/conf
-	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-	export LD_LIBRARY_PATH=$(TORCH_LIB_DIR):$(PWD)third/lib/$(OS)/$(ARCH) && CGO_LDFLAGS="-L$(TORCH_LIB_DIR) -L$(PWD)third/lib/$(OS)/$(ARCH)" go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
+	export LD_LIBRARY_PATH=$(TORCH_LIB_DIR):$(PWD)/third/lib/$(OS)/$(ARCH) && CGO_CFLAGS="-I$(PWD)/third/longmen/include -I$(PWD)/third/sample-luban/include" CGO_LDFLAGS="-L$(TORCH_LIB_DIR) -L$(PWD)/third/lib/$(OS)/$(ARCH)" go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 build-dev: third-dev
-	mkdir -pv $(PUBLISHDIR)/lib
 	mkdir -pv $(PUBLISHDIR)/conf
-	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-  
-	export GOTRACEBACK=crash && export LD_LIBRARY_PATH=$(TORCH_LIB_DIR):$(PWD)third/lib/$(OS)/$(ARCH) && CGO_LDFLAGS="-L$(TORCH_LIB_DIR) -L$(PWD)third/lib/$(OS)/$(ARCH)"  go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
-
+	export GOTRACEBACK=crash && export LD_LIBRARY_PATH=$(TORCH_LIB_DIR):$(PWD)/third/lib/$(OS)/$(ARCH) && CGO_CFLAGS="-I$(PWD)/third/longmen/include -I$(PWD)/third/sample-luban/include" CGO_LDFLAGS="-L$(TORCH_LIB_DIR) -L$(PWD)/third/lib/$(OS)/$(ARCH)"  go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 
 prod: build
-	mkdir -pv $(PUBLISHDIR)/lib
-	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
 pre: build
-	mkdir -pv $(PUBLISHDIR)/lib
-	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
 local: build-dev
-	mkdir -pv $(PUBLISHDIR)/lib
-	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
 dev: build-dev
-	mkdir -pv $(PUBLISHDIR)/lib
-	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
 	cp -aRf conf/$@/* ${PUBLISHDIR}/conf
 clean:
 	rm -rf ./build
