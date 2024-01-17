@@ -10,6 +10,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/BurntSushi/toml"
 	"github.com/uopensail/longmen/config"
 	"github.com/uopensail/longmen/inference/preprocess"
 
@@ -22,14 +23,57 @@ import (
 	"go.uber.org/zap"
 )
 
-type ResourceVersion struct {
-	BigPoolVersion   config.PoolConfig
-	SmallPoolVersion config.PoolConfig
-	ModelVesion      config.ModelConfig
+type ModelConfig struct {
+	Name    string `json:"name" toml:"name" yaml:"name"`
+	Path    string `json:"path" toml:"path" yaml:"path" mapstructure:"path"`
+	Version string `json:"version" toml:"version" yaml:"version"`
 }
 
-func (mgr *InferMgr) TickerLoadJob(envCfg config.EnvConfig, jobUtil *utils.MetuxJobUtil) {
-	jobs := mgr.loadAllJob(envCfg)
+type PoolConfig struct {
+	Name    string `json:"name" toml:"name" yaml:"name"`
+	Path    string `json:"path" toml:"path" yaml:"path"`
+	Version string `json:"version" toml:"version" yaml:"version"`
+}
+
+func ReadPoolVersion(filePath string) (PoolConfig, error) {
+	cfg := struct {
+		PoolConfig `json:"pool" toml:"pool" yaml:"pool"`
+	}{}
+	fileData, err := os.ReadFile(filePath)
+	if err != nil {
+		return cfg.PoolConfig, err
+	}
+
+	if _, err := toml.Decode(string(fileData), &cfg); err != nil {
+		return cfg.PoolConfig, err
+	}
+	return cfg.PoolConfig, nil
+}
+
+func ReadModelVersion(filePath string) (ModelConfig, error) {
+	cfg := struct {
+		ModelConfig `json:"model" toml:"model" yaml:"model"`
+	}{}
+	fileData, err := os.ReadFile(filePath)
+	if err != nil {
+		return cfg.ModelConfig, err
+	}
+
+	if _, err := toml.Decode(string(fileData), &cfg); err != nil {
+		return cfg.ModelConfig, err
+	}
+	return cfg.ModelConfig, nil
+}
+
+type ResourceVersion struct {
+	BigPoolVersion   PoolConfig
+	SmallPoolVersion PoolConfig
+	ModelVesion      ModelConfig
+}
+
+func (mgr *InferMgr) TickerLoadJob(envCfg config.EnvConfig, jobUtil *utils.MetuxJobUtil,
+	smallPoolPath, bigPoolPath, modelPath string) {
+	jobs := mgr.loadAllJob(envCfg, smallPoolPath, bigPoolPath, modelPath)
 	for i := 0; i < len(jobs); i++ {
 		job := jobs[i]
 		if job != nil {
@@ -47,7 +91,7 @@ func (mgr *InferMgr) TickerLoadJob(envCfg config.EnvConfig, jobUtil *utils.Metux
 		defer ticker.Stop()
 		for {
 			<-ticker.C
-			jobs := mgr.loadAllJob(envCfg)
+			jobs := mgr.loadAllJob(envCfg, smallPoolPath, bigPoolPath, modelPath)
 			if len(jobs) <= 0 {
 				continue
 			}
@@ -82,18 +126,18 @@ func downloadFile(envCfg config.EnvConfig, src, dst string) (int64, error) {
 	return dw.Download(src, dst)
 }
 
-func (mgr *InferMgr) loadAllJob(envCfg config.EnvConfig) []func() error {
+func (mgr *InferMgr) loadAllJob(envCfg config.EnvConfig, smallPoolPath, bigPoolPath, modelPath string) []func() error {
 	os.MkdirAll(envCfg.WorkDir, os.ModePerm)
-	smallPoolRemoteCfg, err := config.AppConfigIns.ReadSmallPoolVersion()
+	smallPoolRemoteCfg, err := ReadPoolVersion(smallPoolPath)
 	if err != nil {
 		return nil
 	}
 
-	modelRemoteCfg, err := config.AppConfigIns.ReadModelVersion()
+	modelRemoteCfg, err := ReadModelVersion(modelPath)
 	if err != nil {
 		return nil
 	}
-	bigPoolRemoteCfg, err := config.AppConfigIns.ReadBigPoolVersion()
+	bigPoolRemoteCfg, err := ReadPoolVersion(bigPoolPath)
 	if err != nil {
 		return nil
 	}
@@ -227,17 +271,24 @@ func (mgr *InferMgr) loadAllJob(envCfg config.EnvConfig) []func() error {
 		})
 	} else {
 		//reload   pool Getter
-		files := make([]string, 2)
-		if memSmallPoolCfg.Version != smallPoolRemoteCfg.Version {
-			files[0] = downloadResult.SmallPoolFile
+		if memSmallPoolCfg.Version != smallPoolRemoteCfg.Version || memBigPoolCfg.Version != bigPoolRemoteCfg.Version {
+
+			jobs = append(jobs, func() error {
+				files := make([]string, 2)
+				if memSmallPoolCfg.Version != smallPoolRemoteCfg.Version {
+					files[0] = downloadResult.SmallPoolFile
+				}
+				if memBigPoolCfg.Version != bigPoolRemoteCfg.Version {
+					files[1] = downloadResult.BigPoolFile
+				}
+				job := mgr.poolGetter.GetUpdateFileJob(files)
+				if job != nil {
+					return job()
+				}
+				return nil
+			})
 		}
-		if memBigPoolCfg.Version != bigPoolRemoteCfg.Version {
-			files[1] = downloadResult.BigPoolFile
-		}
-		job := mgr.poolGetter.GetUpdateFileJob(files)
-		if job != nil {
-			jobs = append(jobs, job)
-		}
+
 	}
 
 	//update model
@@ -313,19 +364,19 @@ func (mgr *InferMgr) loadAllJob(envCfg config.EnvConfig) []func() error {
 			stat := prome.NewStat("load.success")
 			defer stat.End()
 
-			mgr.ResourceVersion.SmallPoolVersion = config.PoolConfig{
+			mgr.ResourceVersion.SmallPoolVersion = PoolConfig{
 				Name:    smallPoolRemoteCfg.Name,
 				Path:    downloadResult.SmallPoolFile,
 				Version: smallPoolRemoteCfg.Version,
 			}
 
-			mgr.ResourceVersion.BigPoolVersion = config.PoolConfig{
+			mgr.ResourceVersion.BigPoolVersion = PoolConfig{
 				Name:    bigPoolRemoteCfg.Name,
 				Path:    downloadResult.BigPoolFile,
 				Version: bigPoolRemoteCfg.Version,
 			}
 
-			mgr.ResourceVersion.ModelVesion = config.ModelConfig{
+			mgr.ResourceVersion.ModelVesion = ModelConfig{
 				Name:    modelRemoteCfg.Name,
 				Path:    downloadResult.ModelDir,
 				Version: modelRemoteCfg.Version,

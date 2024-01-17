@@ -7,7 +7,7 @@ require (
 	github.com/codeclysm/extract/v3 v3.1.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-kratos/kratos/v2 v2.7.0
-	github.com/uopensail/example-service v0.0.0-20240114091114-28b779285ffe
+	github.com/uopensail/example-service v0.0.0-20240116111439-51923ae4d7f6
 	go.etcd.io/etcd/client/v3 v3.5.9
 	go.uber.org/zap v1.25.0
 	google.golang.org/grpc v1.58.0

@@ -34,7 +34,8 @@ func NewServices() *Services {
 func (srv *Services) Init(etcdName string, etcdCli *etcdclient.Client, reg utils.Register) {
 	srv.etcdCli = etcdCli
 	jobUtil := utils.NewMetuxJobUtil(etcdName, reg, etcdCli, 10, -1)
-	srv.InferMgr.TickerLoadJob(config.AppConfigIns.EnvConfig, jobUtil)
+	srv.InferMgr.TickerLoadJob(config.AppConfigIns.EnvConfig, jobUtil,
+		config.AppConfigIns.SmallPoolVersionFile, config.AppConfigIns.BigPoolVersionFile, config.AppConfigIns.ModelVersionFile)
 
 }
 func (srv *Services) RegisterGrpc(grpcS *grpc.Server) {

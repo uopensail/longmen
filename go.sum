@@ -180,8 +180,8 @@ github.com/ugorji/go/codec v1.2.11 h1:BMaWp1Bb6fHwEtbplGBGJ498wD+LKlNSl25MjdZY4d
 github.com/ugorji/go/codec v1.2.11/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
 github.com/ulikunitz/xz v0.5.11 h1:kpFauv27b6ynzBNT/Xy+1k+fK4WswhN/6PN5WhFAGw8=
 github.com/ulikunitz/xz v0.5.11/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
-github.com/uopensail/example-service v0.0.0-20240114091114-28b779285ffe h1:kQHYPtAhS1Iy+mGTQwPCfrzfSStHNbsvVHbprufE2S8=
-github.com/uopensail/example-service v0.0.0-20240114091114-28b779285ffe/go.mod h1:31Hd7vKjzaDuASxZZTTT2FqCmxtaUvCdnCkM86qkSwY=
+github.com/uopensail/example-service v0.0.0-20240116111439-51923ae4d7f6 h1:uMQ0y27MHJrM7NCw6HIdTjY1eU9egaiuX03BGlF+328=
+github.com/uopensail/example-service v0.0.0-20240116111439-51923ae4d7f6/go.mod h1:31Hd7vKjzaDuASxZZTTT2FqCmxtaUvCdnCkM86qkSwY=
 github.com/uopensail/ulib v0.0.21-0.20231230040216-407f430042a4 h1:SKMhtJbfDi2uYTDC3HjZD/Qm2IBuJUUuWrH135rq8aQ=
 github.com/uopensail/ulib v0.0.21-0.20231230040216-407f430042a4/go.mod h1:ERdKdRkObWc/2i0gEn76+4ff2tIP2LEdFCjYjx4sApo=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

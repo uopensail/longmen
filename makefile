@@ -45,13 +45,13 @@ build: third-prod
 	mkdir -pv $(PUBLISHDIR)/lib
 	mkdir -pv $(PUBLISHDIR)/conf
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
-	export LD_LIBRARY_PATH=$(TORCH_LIB_DIR) && CGO_LDFLAGS="-L$(TORCH_LIB_DIR)" go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
+	export LD_LIBRARY_PATH=$(TORCH_LIB_DIR):$(PWD)third/lib/$(OS)/$(ARCH) && CGO_LDFLAGS="-L$(TORCH_LIB_DIR) -L$(PWD)third/lib/$(OS)/$(ARCH)" go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 build-dev: third-dev
 	mkdir -pv $(PUBLISHDIR)/lib
 	mkdir -pv $(PUBLISHDIR)/conf
 	cp -aRf third/lib/$(OS)/$(ARCH)/* $(PUBLISHDIR)/lib/
   
-	export GOTRACEBACK=crash && export LD_LIBRARY_PATH=$(TORCH_LIB_DIR) && CGO_LDFLAGS="-L$(TORCH_LIB_DIR)"  go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
+	export GOTRACEBACK=crash && export LD_LIBRARY_PATH=$(TORCH_LIB_DIR):$(PWD)third/lib/$(OS)/$(ARCH) && CGO_LDFLAGS="-L$(TORCH_LIB_DIR) -L$(PWD)third/lib/$(OS)/$(ARCH)"  go build -o $(PUBLISHDIR)/$(PROJECT_NAME) $(GOFLAGS)
 
 
 prod: build
