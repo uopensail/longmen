@@ -13,6 +13,7 @@ message Request {
   string userFeatures = 3;
   repeated Record records = 4;
   map<string, string> extras = 5;
+  string request_id =6;
 }
 
 message Response {
@@ -20,7 +21,7 @@ message Response {
   string userId = 2;
   repeated Record records = 3;
   map<string, string> extras = 4;
-  
+  string request_id =5;
 }
 
 service Rank {

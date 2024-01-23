@@ -24,15 +24,17 @@ import (
 )
 
 type ModelConfig struct {
-	Name    string `json:"name" toml:"name" yaml:"name"`
-	Path    string `json:"path" toml:"path" yaml:"path" mapstructure:"path"`
-	Version string `json:"version" toml:"version" yaml:"version"`
+	localPath string
+	Name      string `json:"name" toml:"name" yaml:"name"`
+	Path      string `json:"path" toml:"path" yaml:"path" mapstructure:"path"`
+	Version   string `json:"version" toml:"version" yaml:"version"`
 }
 
 type PoolConfig struct {
-	Name    string `json:"name" toml:"name" yaml:"name"`
-	Path    string `json:"path" toml:"path" yaml:"path"`
-	Version string `json:"version" toml:"version" yaml:"version"`
+	localPath string
+	Name      string `json:"name" toml:"name" yaml:"name"`
+	Path      string `json:"path" toml:"path" yaml:"path"`
+	Version   string `json:"version" toml:"version" yaml:"version"`
 }
 
 func ReadPoolVersion(filePath string) (PoolConfig, error) {
@@ -152,9 +154,9 @@ func (mgr *InferMgr) loadAllJob(envCfg config.EnvConfig, smallPoolPath, bigPoolP
 		ModelDir      string
 		ModelName     string
 	}{
-		BigPoolFile:   memBigPoolCfg.Path,
-		SmallPoolFile: memSmallPoolCfg.Path,
-		ModelDir:      memModelCfg.Path,
+		BigPoolFile:   memBigPoolCfg.localPath,
+		SmallPoolFile: memSmallPoolCfg.localPath,
+		ModelDir:      memModelCfg.localPath,
 		ModelName:     memModelCfg.Name,
 	}
 	//拷贝到工作目录
@@ -174,9 +176,9 @@ func (mgr *InferMgr) loadAllJob(envCfg config.EnvConfig, smallPoolPath, bigPoolP
 			stat.SetCounter(int(dwSize))
 			zlog.LOG.Info("download file success", zap.String("source", smallPoolRemoteCfg.Path), zap.String("dst", dwFilePath))
 
-			zlog.LOG.Info("os.Remove", zap.String("path", memSmallPoolCfg.Path),
+			zlog.LOG.Info("os.Remove", zap.String("path", memSmallPoolCfg.localPath),
 				zap.String("new_path", dwFilePath))
-			os.Remove(memSmallPoolCfg.Path)
+			os.Remove(memSmallPoolCfg.localPath)
 			downloadResult.SmallPoolFile = dwFilePath
 
 			return nil
@@ -200,9 +202,9 @@ func (mgr *InferMgr) loadAllJob(envCfg config.EnvConfig, smallPoolPath, bigPoolP
 			zlog.LOG.Info("download file success", zap.String("source", bigPoolRemoteCfg.Path), zap.String("dst", dwFilePath))
 			stat.SetCounter(int(dwSize))
 
-			zlog.LOG.Info("os.Remove", zap.String("path", memBigPoolCfg.Path),
+			zlog.LOG.Info("os.Remove", zap.String("path", memBigPoolCfg.localPath),
 				zap.String("new_path", dwFilePath))
-			os.Remove(memBigPoolCfg.Path)
+			os.Remove(memBigPoolCfg.localPath)
 			downloadResult.BigPoolFile = dwFilePath
 			return nil
 		})
@@ -363,24 +365,28 @@ func (mgr *InferMgr) loadAllJob(envCfg config.EnvConfig, smallPoolPath, bigPoolP
 		jobs = append(jobs, func() error {
 			stat := prome.NewStat("load.success")
 			defer stat.End()
-
-			mgr.ResourceVersion.SmallPoolVersion = PoolConfig{
-				Name:    smallPoolRemoteCfg.Name,
-				Path:    downloadResult.SmallPoolFile,
-				Version: smallPoolRemoteCfg.Version,
+			var RV ResourceVersion
+			RV.SmallPoolVersion = PoolConfig{
+				localPath: downloadResult.SmallPoolFile,
+				Name:      smallPoolRemoteCfg.Name,
+				Path:      smallPoolRemoteCfg.Path,
+				Version:   smallPoolRemoteCfg.Version,
 			}
 
-			mgr.ResourceVersion.BigPoolVersion = PoolConfig{
-				Name:    bigPoolRemoteCfg.Name,
-				Path:    downloadResult.BigPoolFile,
-				Version: bigPoolRemoteCfg.Version,
+			RV.BigPoolVersion = PoolConfig{
+				localPath: downloadResult.BigPoolFile,
+				Name:      bigPoolRemoteCfg.Name,
+				Path:      bigPoolRemoteCfg.Path,
+				Version:   bigPoolRemoteCfg.Version,
 			}
 
-			mgr.ResourceVersion.ModelVesion = ModelConfig{
-				Name:    modelRemoteCfg.Name,
-				Path:    downloadResult.ModelDir,
-				Version: modelRemoteCfg.Version,
+			RV.ModelVesion = ModelConfig{
+				localPath: downloadResult.ModelDir,
+				Name:      modelRemoteCfg.Name,
+				Path:      modelRemoteCfg.Path,
+				Version:   modelRemoteCfg.Version,
 			}
+			mgr.ResourceVersion = RV
 			zlog.LOG.Info("Reload End", zap.Any("Version", mgr.ResourceVersion))
 
 			return nil
