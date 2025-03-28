@@ -1,33 +1,73 @@
-//
-// `LongMen` - 'Torch Model inference in c++'
-// Copyright (C) 2019 - present timepi <timepi123@gmail.com>
-// LongMen is provided under: GNU Affero General Public License (AGPL3.0)
-// https://www.gnu.org/licenses/agpl-3.0.html unless stated otherwise.
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-
-#ifndef LONGMAN_H
-#define LONGMAN_H
+#ifndef LONGMEN_H_
+#define LONGMEN_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void *longmen_new_model(char *path, int plen, char *key, int klen,
-                        char *toolkit, int tlen, char *model, int mlen);
-void longmen_del_model(void *model);
-void longmen_forward(void *model, char *user_features, int len, void *items,
-                     void *lens, int size, float *scores);
+/**
+ * @brief Handle type for Longmen model instance
+ */
+typedef void *LongmenModel;
+
+/**
+ * @brief Handle type for data pool
+ */
+typedef void *LongmenPool;
+
+/**
+ * @brief Handle type for inference outputs
+ */
+typedef void *LongmenOutputs;
+
+/**
+ * @brief Create a new model instance
+ * @param workdir Path to model workspace directory
+ * @return Model handle or NULL on failure
+ */
+LongmenModel longmen_create_model(const char *workdir);
+
+/**
+ * @brief Release model resources
+ * @param model Model handle to release
+ */
+void longmen_release_model(LongmenModel model);
+
+/**
+ * @brief Perform batch inference
+ * @param model Model handle
+ * @param batch_size Number of items per batch
+ * @param pool Data pool handle
+ * @param user_features User feature string
+ * @param items Array of item IDs to process
+ * @return Inference outputs handle
+ */
+LongmenOutputs longmen_serve(LongmenModel model, int batch_size,
+                             LongmenPool pool, const char *user_features,
+                             const char **items);
+
+/**
+ * @brief Create a data pool from dataset
+ * @param model Model handle
+ * @param data_path Path to material data file
+ * @return Data pool handle or NULL on failure
+ */
+LongmenPool longmen_create_pool(LongmenModel model, const char *data_path);
+
+/**
+ * @brief Release data pool resources
+ * @param pool Data pool handle to release
+ */
+void longmen_release_pool(LongmenPool pool);
+
+/**
+ * @brief Release inference outputs
+ * @param outputs Outputs handle to release
+ */
+void longmen_release_outputs(LongmenOutputs outputs);
+
 #ifdef __cplusplus
 } /* end extern "C"*/
 #endif
 
-#endif // LONGMAN_H
+#endif // LONGMEN_H_

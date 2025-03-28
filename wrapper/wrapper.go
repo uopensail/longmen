@@ -19,6 +19,15 @@ import (
 	"github.com/uopensail/ulib/utils"
 )
 
+type Output struct {
+	Name  string
+	Batch int32
+	Width int32
+	Value []float32
+}
+
+type OutputSlice []Output
+
 type Wrapper struct {
 	utils.Reference
 	Ptr unsafe.Pointer
