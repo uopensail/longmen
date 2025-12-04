@@ -1,0 +1,14 @@
+.idea/
+cmake-build-debug/
+*.bin
+*.tfrecord
+build/
+.vscode/
+lib/
+cmake-build-release/
+cmake-build-debug/
+*.so
+*.dylib
+build_cpp/
+lib/
+dist/
