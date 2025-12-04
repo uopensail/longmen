@@ -2,24 +2,27 @@ syntax = "proto3";
 option go_package = "./;api";
 package api;
 
-message Record {
+message FloatArray {
+  repeated float values = 1;
+}
+
+message Entry {
   string id = 1;
-  float score = 2;
+  repeated FloatArray scores = 2;
 }
 
 message Request {
-  string modelId = 1;
-  string userId = 2;
-  string userFeatures = 3;
-  repeated Record records = 4;
-  map<string, string> extras = 5;
+  string userId = 1;
+  string features = 2;
+  repeated Entry entries = 3;
+  map<string, string> extras = 4;
 }
 
 message Response {
   int32 status = 1;
-  string userId = 2;
-  repeated Record records = 3;
-  map<string, string> extras = 4;
+  string modelId =2;
+  int64 version = 3;
+  repeated Entry entries = 4;
 }
 
 service Rank {
