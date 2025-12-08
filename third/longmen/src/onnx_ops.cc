@@ -349,27 +349,8 @@ void SparseEmbeddingLookupKernel::Compute(OrtKernelContext *context) {
                                " is no longer loaded");
     }
 
-    // const size_t found =
-    //     manager.batch_lookup(group_id_, input_data,
-    //                          static_cast<size_t>(total_elements),
-    //                          output_data);
-
-    // Log statistics
-    // const double hit_rate =
-    //     (total_elements > 0) ? (100.0 * found) / total_elements : 0.0;
-
-    // if (found < static_cast<size_t>(total_elements)) {
-    //   LOG(WARNING) << "Embedding lookup incomplete: found=" << found << "/"
-    //                << total_elements << " (" << std::fixed
-    //                << std::setprecision(1) << hit_rate << "%) for group "
-    //                << group_id_;
-    // }
-
-    // LOG(INFO) << "Embedding lookup complete: batch_size=" << batch_size
-    //           << ", seq_len=" << seq_len << ", found=" << found << "/"
-    //           << total_elements << " (" << std::fixed << std::setprecision(1)
-    //           << hit_rate << "%), group=" << group_id_;
-
+    manager.batch_lookup(group_id_, input_data,
+                         static_cast<size_t>(total_elements), output_data);
   } catch (const Ort::Exception &e) {
     LOG(ERROR) << "ONNX Runtime exception in Compute for group " << group_id_
                << ": " << e.what();

@@ -102,10 +102,6 @@ CPUGraph::~CPUGraph() { LOG(INFO) << "Destroying CPUGraph"; }
 // Inference Implementation
 // ============================================================================
 
-// ============================================================================
-// Inference Implementation
-// ============================================================================
-
 int CPUGraph::forward(GraphIO &io) const {
   // Check if graph is ready
   if (!is_ready()) {
@@ -193,7 +189,6 @@ int CPUGraph::forward(GraphIO &io) const {
       std::memcpy(dst_ptr, src_ptr, byte_size);
     }
 
-    VLOG(1) << "Inference completed successfully: batch=" << batch;
     return 0; // Success
 
   } catch (const Ort::Exception &e) {

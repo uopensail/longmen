@@ -1,3 +1,4 @@
 [submodule "third/minia"]
 	path = third/minia
 	url = git@github.com:uopensail/minia.git
+	branch = main
